@@ -1,5 +1,7 @@
 # Docker Friend 
 
+
+#DEVELOPMENT MODE
 Everyone needs a friend. 
 When it comes to docker, it's nice to have a nice UI where you can have access to your containers, and can also inject temporary AWS credentials.
 
