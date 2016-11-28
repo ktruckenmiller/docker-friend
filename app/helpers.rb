@@ -2,7 +2,7 @@ module Sinatra
   module DockerFriend
     module Helpers
       def is_local_req?
-        request.ip.to_s == "127.0.0.1" || request.ip.to_s == "::1" || (request.ip.to_s.include? "172.22.0.")
+        request.ip.to_s == "127.0.0.1" || request.ip.to_s == "::1" || (request.ip.to_s[0,3] == "172")
       end
 
       def get_profile_environments
@@ -33,7 +33,7 @@ module Sinatra
           credentials: creds
         })
         get_mfa_device
-        if !session[:profile_mfa].empty?
+        if !session[:profile_mfa].nil? && !session[:profile_mfa].empty?
           begin
             res = sts.get_session_token(duration_seconds: 3600, serial_number: session[:mfa_device], token_code: session[:profile_mfa])
 
