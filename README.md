@@ -5,13 +5,17 @@ Everyone needs a friend. When it comes to docker, it's nice to have a nice UI wh
 ![alt tag](https://raw.githubusercontent.com/ktruckenmiller/docker-friend/master/docker-friend.png)
 
 
-If you haven't already done so, you'll need to install the node dependencies in dev mode.
 
-`npm install`
 
-Then you can run
+Simply run:
 
-`docker-compose -f docker-compose-dev.yml up`
+`docker-compose up`
+
+and then navigate your browser to:
+
+`http://localhost:8010/`
+
+and proceed to be a friend
 
 
 
