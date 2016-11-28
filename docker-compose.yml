@@ -15,7 +15,7 @@ services:
     command: rackup -o 0.0.0.0 -E development
 
   events:
-    container_name: docker-events
+    container_name: ktruckenmiller/docker-events
     image: ktruckenmiller/docker-events
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
