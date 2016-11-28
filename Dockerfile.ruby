@@ -1,4 +1,5 @@
 FROM ruby:2.3
+MAINTAINER kmtruckenmiller@gmail.com
 RUN apt-get update
 RUN apt-get install -y  python-pip python-dev
 RUN pip install awscli

@@ -4,16 +4,11 @@ services:
     container_name: docker-friend
     depends_on:
       - events
-    build:
-      dockerfile: Dockerfile.ruby
-      context: .
+    image: ktruckenmiller/docker-friend
     volumes:
-      - ./:/code
       - ~/.aws:/root/.aws
     volumes_from:
       - events
-    environment:
-      - RACK_ENV=development
     ports:
       - 8010:9292
     restart: always
@@ -21,12 +16,9 @@ services:
 
   events:
     container_name: docker-events
-    build:
-      dockerfile: Dockerfile.node
-      context: .
+    image: ktruckenmiller/docker-events
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     ports:
       - 8080:8080
-    command: node /code/index.js
     restart: always
