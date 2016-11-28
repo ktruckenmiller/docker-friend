@@ -12,7 +12,6 @@ services:
     ports:
       - 8010:9292
     restart: always
-    command: rackup -o 0.0.0.0
 
   events:
     container_name: ktruckenmiller/docker-events
