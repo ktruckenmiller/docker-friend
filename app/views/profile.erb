@@ -1,0 +1,45 @@
+
+<div class="wrap profile">
+  <h1 class="title" >Docker // AWS</h1>
+
+  <div id='assumerole'>
+      <h2>Select Your AWS Profile</h2>
+      <form method='POST' action='/profile'>
+        <div class="row">
+        <% profiles.each do |profile|%>
+          <div class="box col-xs-12 col-sm-6 col-sm-offset-3 col-lg-4 col-lg-offset-4">
+            <input type="submit" name="profile" class="button" value="<%= profile %>" />
+          </div>
+        <% end %>
+        <!-- <input type="button" name="profile" class="reset button" value="reset"/> -->
+        <div class="box col-xs-12 col-sm-6 col-sm-offset-3 col-lg-4 col-lg-offset-4">
+          <input type="input" name="profile_mfa" class="mfa" placeholder="mfa token" />
+        </div>
+
+      </div>
+      </form>
+  </div>
+  <div class="row">
+    <a class=" col-xs-12 col-sm-6 col-sm-offset-3 col-lg-4 col-lg-offset-4 help" href="#ex1" rel="modal:open">help</a>
+  </div>
+
+ <div id="ex1" style="display:none;">
+   <h2>What is Docker AWS Proxy?</h2>
+   <p>The docker AWS proxy service allows us to simulate what conditions will exist in a container running on an EC2 instance within AWS. We can assume roles for our containers, giving them the ability to query the ec2 metadata service locally on your own machine!</p>
+   <p>Docker AWS Proxy supports multiple profiles which are discovered from <code>~/.aws/credentials</code>.  Select the profile here and it will be used to authorize future requets
+   listing and assuming the roles and discovering your MFA token's serial.</p>
+   <h2>MFA Token Option</h2>
+   <p>
+     If you enter MFA below, a session token for this profile can be used
+     in lieu of an MFA token for role assumption later.  This token can be good for
+     as much as one day (86400 seconds).
+   </p>
+  <br><a href="#" rel="modal:close">Close</a> or press ESC</p>
+ </div>
+
+
+ <div id="logging_in">
+   <div class="loading"></div>
+
+ </div>
+</div>

@@ -1,0 +1,39 @@
+{
+  "name": "ec2metadata-role-assumption",
+  "version": "1.0.0",
+  "description": "Provides an endpoint on 169.254.169.254:80 that can answer AWS client requests for credentials (boto, aws-sdk-ruby, and others will try to pull from here automatically ),  and an interface to assume roles to configure those credentials through a web interface.",
+  "main": "gulp.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ktruckenmiller/ec2metadata-role-assumption.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/ktruckenmiller/ec2metadata-role-assumption/issues"
+  },
+  "homepage": "https://github.com/ktruckenmiller/ec2metadata-role-assumption#readme",
+  "devDependencies": {
+    "browserify": "^13.1.1",
+    "gulp": "^3.9.1",
+    "gulp-concat": "^2.6.1",
+    "gulp-sass": "^2.3.2",
+    "gulp-sourcemaps": "^1.9.1",
+    "gulp-uglify": "^2.0.0",
+    "gulp-util": "^3.0.7",
+    "vinyl-buffer": "^1.0.0",
+    "vinyl-source-stream": "^1.1.0"
+  },
+  "dependencies": {
+    "@blinkmobile/aws-profile-management": "^1.0.1",
+    "aws-sdk": "^2.7.7",
+    "got": "^6.6.3",
+    "hapi": "^15.2.0",
+    "lodash": "^4.17.2",
+    "nes": "^6.3.1",
+    "request": "^2.79.0"
+  }
+}

@@ -1,0 +1,26 @@
+version: '2'
+services:
+  dockerfriend:
+    container_name: docker-aws-proxy
+    depends_on:
+      - events
+    build: .
+    volumes_from:
+      - events
+    environment:
+      - RACK_ENV=development
+    ports:
+      - 8010:9292
+    restart: always
+    command: rackup -o 0.0.0.0 -E development
+  events:
+    container_name: docker-events
+    image: mhart/alpine-node:latest
+    volumes:
+      - ./:/code
+      - ~/.aws:/root/.aws
+      - /var/run/docker.sock:/var/run/docker.sock
+    ports:
+      - 8080:8080
+    command: node /code/index.js
+    restart: always

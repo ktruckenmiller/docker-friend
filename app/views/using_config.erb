@@ -1,0 +1,35 @@
+<h2>Using the config generator</h2>
+
+<p>This is cool: if you provide an MFA token when you choose a profile, a 
+sesion token will be issued.  This means you can assume roles with the profile 
+( and the session token ) <em>without providing another MFA token</em>.</p>
+
+<p>This means if you write out a config, the standard SDKs can also assume the 
+role for you.  This is useful, because the role's assumption is only good for 
+one hour at the most, but the session token is valid for up to a day.  </p>
+
+<p>This application can provide the config file you'll need for you.  At the 
+URL <kbd>/config/&lt;role-arn&gt;</kbd> is a link to a config file that 
+will use the current profile to assume <kbd>role-arn</kbd> automatically.</p>
+
+<p>In this URL, <kbd>role-arn</kbd> isn't a functional part of the config; 
+it's simply passed along into the 
+
+<p>Try it like shown below.  This uses a docker image "aws" which has the awscli 
+installed, but it doesn't need anything else special. Also, it uses the 
+special role ARN placeholder 'config', which will use the last assumed role. 
+On the <a href='/'>main page</a>, a link is provided you can use in the place 
+of the below if you want to use multiple roles.  
+</p>
+
+<pre>
+curl -L '<%= "#{request.env['rack.url_scheme']}://#{request.env['HTTP_HOST']}" %>/config/current' -o /tmp/config
+docker run -it --rm -v /tmp/config:/root/.aws/config aws aws sts get-caller-identity
+</pre>
+
+<p>In that command, the file /tmp/config will contain the profile you've selected, 
+and the role that should be assumed by default.  The role will be automatically assumed 
+( as the <kbd>get-caller-identity</kbd> illustrates) </p>
+
+<p>Use this with docker containers; you can specify a role for each container if you save to a different config.  Just remember, 
+when your profile session token expires, the role won't be assumable any more. </p>

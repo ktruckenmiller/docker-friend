@@ -1,0 +1,8 @@
+source 'https://rubygems.org'
+gem 'rack'
+gem 'sinatra'
+gem 'sinatra-contrib'
+gem 'erubis'
+gem 'inifile'
+gem 'docker-api'
+gem 'aws-sdk', '~> 2'

@@ -1,0 +1,95 @@
+#containers {
+  padding:20px;
+  .container_wrap {
+    // overflow:hidden;
+    .container_box {
+
+    }
+    .docker_container {
+      border:none;
+      transition: box-shadow .3s ease-in-out;
+      position:relative;
+      padding:8px 15px 8px 20px;
+      color:black;
+      box-shadow: 0 2px 4px 0 rgba(0, 0, 0, 0.2), 0 25px 50px 0 rgba(0, 0, 0, 0.1);
+      background-color:white;
+      text-align:left;
+      display:flex;
+      justify-content: space-between;
+      .names {
+        h3 {
+
+        }
+        p {
+          font-size:12px;
+        }
+      }
+      .controls {
+        display:flex;
+        align-items:center;
+        opacity:0;
+        transition: opacity .2s ease-in-out;
+        object {
+          max-height:20px;
+        }
+        i {
+          margin: 0 0 0 20px;
+          cursor:pointer;
+          color:$blue;
+          &:hover {
+            color: $dark_blue;
+          }
+        }
+        .fa-ellipsis-h {
+          font-size:18px;
+        }
+      }
+      &:hover {
+
+        .controls {
+          opacity:1;
+
+        }
+      }
+      &.active {
+        box-shadow:0 25px 50px 0 rgba(0, 0, 0, 0.1);
+        opacity:.5;
+        .fa-refresh {
+          animation-name: spin;
+          animation-duration: 4000ms;
+          animation-iteration-count: infinite;
+          animation-timing-function: linear;
+        }
+      }
+      .state {
+        position:absolute;
+        top:0;
+        bottom:0;
+        left:0px;
+        width:8px;
+            box-shadow: inset -2px 0px 1px rgba(0,0,0,.14);
+        &.running {background-color:$blue;}
+        &.exited {background-color:$dark_gray;}
+        &.created {background-color:$yellow;}
+      }
+    }
+  }
+}
+
+
+@keyframes spin {
+    from {transform:rotate(0deg);}
+    to {transform:rotate(360deg);}
+}
+// .box-row {
+//     position: relative;
+//     box-sizing: border-box;
+//     min-height: 1rem;
+//     margin-bottom: 0;
+//     background: #007FFF;
+//     border: 1px solid #FFF;
+//     border-radius: 2px;
+//     overflow: hidden;
+//     text-align: center;
+//     color: #fff;
+// }
