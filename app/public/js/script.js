@@ -211,7 +211,9 @@ $(document).ready(function() {
 
     function parseEvents(res) {
       var newArr = JSON.parse(res);
-
+      newArr = _.reject(newArr, function(cont) {
+        return cont.Names[0] === '/docker-friend' || cont.Names[0] === '/docker-events'
+      })
       return newArr.map(function(cont) {
         var oldCont = _.find(containers.containers, function(c) {
           return c.Id === cont.Id
