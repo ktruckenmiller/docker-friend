@@ -132,30 +132,30 @@ class DockerFriend < Sinatra::Base
     # get the creds
     creds = authenticate(params[:id], params[:role], params[:mfa])
     # push the creds into the container
-    the_creds_file = get_creds_file(params[:id])
-    res = put_file_in_container(the_creds_file, params[:id])
-    content_type 'text/json'
-    JSON.pretty_generate(res)
+    p creds
+    if creds[:err]
+      content_type 'text/json'
+      JSON.pretty_generate({err: true, res: creds[:res].to_s})
+    else
+      the_creds_file = get_creds_file(params[:id])
+      res = put_file_in_container(the_creds_file, params[:id])
+      content_type 'text/json'
+      JSON.pretty_generate(res)
+    end
+
   end
 
   get '/restart' do
     erb :restart
   end
 
-  get '/has_creds' do
-    cred_file = get_creds_file('a7aa368ab6e75844e5a3a8f36b43c57dd1e74acc2562657afbca1bd458e2d77b')
-    container = Docker::Container.get('a7aa368ab6e75844e5a3a8f36b43c57dd1e74acc2562657afbca1bd458e2d77b')
+  get '/current' do
     begin
-      user = container.exec(['whoami']).flatten[0].gsub!(/\W+/, '')
-      if user == 'root'
-        user_dir = "/" + user
-      else
-        user_dir = "/home/"+ user
-      end
-    rescue
-      user_dir = "/root"
+      names = iam.list_policies.policies.map { |pol| pol.to_h}
+      JSON.pretty_generate(names)
+    rescue Aws::IAM::Errors::ServiceError
+      # rescues all errors returned by AWS Identity and Access Management
     end
-    container.store_file(user_dir + "/.aws/credentials", cred_file)
   end
 
   post '/profile' do
