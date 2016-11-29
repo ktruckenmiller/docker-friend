@@ -89,6 +89,7 @@ module Sinatra
             })
           end
         rescue
+          
           session[:elevated] = false
         end
       end
@@ -102,8 +103,16 @@ module Sinatra
       end
 
       def get_mfa_device
-        res = iam.list_mfa_devices()
-        session[:mfa_device] = res.mfa_devices[0].serial_number
+        begin
+          res = iam.list_mfa_devices()
+          session[:mfa_device] = res.mfa_devices[0].serial_number
+        rescue SignatureDoesNotMatch => e
+          p e
+          p "You need to restart docker"
+
+          session[:mfa_device] = ""
+          redirect '/restart', 303
+        end
       end
 
       def get_roles

@@ -52,7 +52,7 @@
         font-weight: 100; }
     .modal_overlay .modal .mid {
       padding: 5px;
-      overflow: scroll; }
+      overflow: auto; }
       .modal_overlay .modal .mid ul {
         margin: 0;
         padding: 0; }
@@ -374,10 +374,10 @@ code {
         font-size: 18px; }
     #containers .container_wrap .docker_container:hover .controls {
       opacity: 1; }
-    #containers .container_wrap .docker_container.active {
+    #containers .container_wrap .docker_container.inactive {
       box-shadow: 0 25px 50px 0 rgba(0, 0, 0, 0.1);
-      opacity: .5; }
-      #containers .container_wrap .docker_container.active .fa-refresh {
+      display: none; }
+      #containers .container_wrap .docker_container.inactive .fa-refresh {
         animation-name: spin;
         animation-duration: 4000ms;
         animation-iteration-count: infinite;

@@ -60,7 +60,7 @@ class DockerFriend < Sinatra::Base
   end
 
   post '/profile' do
-    if !params[:profile_mfa].empty?
+    if !params[:profile_mfa].nil? && !params[:profile_mfa].empty?
       session[:profile_mfa] = params[:profile_mfa]
     end
     session[:current_profile] = params[:profile]
@@ -136,6 +136,10 @@ class DockerFriend < Sinatra::Base
     res = put_file_in_container(the_creds_file, params[:id])
     content_type 'text/json'
     JSON.pretty_generate(res)
+  end
+
+  get '/restart' do
+    erb :restart
   end
 
   get '/has_creds' do

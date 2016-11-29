@@ -1,7 +1,7 @@
 {
-  "name": "ec2metadata-role-assumption",
+  "name": "dockerfriend",
   "version": "1.0.0",
-  "description": "Provides an endpoint on 169.254.169.254:80 that can answer AWS client requests for credentials (boto, aws-sdk-ruby, and others will try to pull from here automatically ),  and an interface to assume roles to configure those credentials through a web interface.",
+  "description": "Dockerfriend :)",
   "main": "gulp.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"

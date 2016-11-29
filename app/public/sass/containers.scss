@@ -51,9 +51,9 @@
 
         }
       }
-      &.active {
+      &.inactive {
         box-shadow:0 25px 50px 0 rgba(0, 0, 0, 0.1);
-        opacity:.5;
+        display:none;
         .fa-refresh {
           animation-name: spin;
           animation-duration: 4000ms;

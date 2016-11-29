@@ -9,4 +9,4 @@ ADD ./Gemfile.lock /code/Gemfile.lock
 WORKDIR /code
 RUN bundle install
 ADD . /code
-CMD rackup -o 0.0.0.0
+CMD ["rackup", "-o", "0.0.0.0"]
