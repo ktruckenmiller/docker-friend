@@ -42,8 +42,7 @@ class DockerFriend < Sinatra::Base
       puts 'Request IP: ' + request.ip
       redirect 'http://google.com'
     end
-
-    if !session[:profiles]
+    if session[:profiles].empty?
       get_profile_environments()
     end
 
@@ -63,13 +62,11 @@ class DockerFriend < Sinatra::Base
     if !params[:profile_mfa].nil? && !params[:profile_mfa].empty?
       session[:profile_mfa] = params[:profile_mfa]
     end
+    p params.inspect
     session[:current_profile] = params[:profile]
     res = set_creds
-    if res[:err]
-      redirect '/', 303
-    else
-      redirect '/profile', 303
-    end
+    content_type 'text/json'
+    JSON.pretty_generate(res)
   end
 
   get '/profile' do
@@ -98,7 +95,6 @@ class DockerFriend < Sinatra::Base
     content_type 'text/json'
     JSON.pretty_generate(containers)
   end
-
   post '/containers' do
     container = Docker::Container.get(params[:id])
 

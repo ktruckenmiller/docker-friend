@@ -7,10 +7,15 @@ module Sinatra
 
       def get_profile_environments
         profiles = []
+        p "Get profile Environments"
+        p session[:profile_path]
+        p File.expand_path session[:profile_path]
         session[:profile_path] = "~/.aws/credentials"
+
         begin
           session[:profile_path] = File.expand_path session[:profile_path]
         rescue ArgumentError => e # docker container maybe?
+
           session[:profile_path] = "/code/.aws/credentials"
           ENV['HOME'] = '/code'
         end
@@ -32,6 +37,7 @@ module Sinatra
           region: 'us-east-1',
           credentials: creds
         })
+
         get_mfa_device
         if !session[:profile_mfa].nil? && !session[:profile_mfa].empty?
           begin
@@ -89,7 +95,7 @@ module Sinatra
             })
           end
         rescue
-          
+
           session[:elevated] = false
         end
       end

@@ -4,7 +4,7 @@ var _ = require('lodash')
 
 
 $(document).ready(function() {
-  $('#assumerole form').submit(processForm);
+  $('#assumerole .form .button').on("click", processForm);
 
 
 
@@ -239,11 +239,6 @@ $(document).ready(function() {
       })
     }
   }
-
-
-
-
-
   function updateContainers() {
     $.ajax({
       url: '/containers'
@@ -280,12 +275,24 @@ function dockerRun(obj) {
 
 
 function processForm(e) {
-  var form = this;
-  if(e.preventDefault) {
-    e.preventDefault()
-  }
+  var profile_mfa = $('#assumerole .form .mfa')[0].value;
+  var profile = e.target.value;
+
+  console.log(profile, profile_mfa);
+
   $('#logging_in').addClass('opening');
-  form.submit()
+  $.ajax({
+    url: '/profile',
+    method: 'POST',
+    data: {
+      profile_mfa: profile_mfa,
+      profile: profile
+    }
+  }).done(function(res) {
+    if(!res.err) {
+      window.location = '/profile'
+    }
+  })
 
   return false;
 }
