@@ -7,9 +7,6 @@ module Sinatra
 
       def get_profile_environments
         profiles = []
-        p "Get profile Environments"
-        p session[:profile_path]
-        p File.expand_path session[:profile_path]
         session[:profile_path] = "~/.aws/credentials"
 
         begin

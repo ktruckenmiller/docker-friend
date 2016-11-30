@@ -42,7 +42,7 @@ class DockerFriend < Sinatra::Base
       puts 'Request IP: ' + request.ip
       redirect 'http://google.com'
     end
-    if session[:profiles].empty?
+    if session[:profiles].nil? || session[:profiles].empty?
       get_profile_environments()
     end
 
