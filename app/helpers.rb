@@ -27,6 +27,16 @@ module Sinatra
         session[:profiles] = profiles
       end
 
+      def put(name, obj)
+        redis = Redis.new(:host => "redis")
+        redis.set(name, obj.to_json)
+      end
+
+      def get(name)
+        redis = Redis.new(:host => "redis")
+        JSON.parse(redis.get(name))
+      end
+
       def set_creds
 
         creds = Aws::SharedCredentials.new({profile_name: session[:current_profile], correctClockSkew: true})
