@@ -8,7 +8,10 @@ require 'docker'
 require 'inifile'
 require 'zlib'
 require 'date'
+require 'pp'
 require 'redis'
+require 'rack'
+require 'rack/session/redis'
 require 'sinatra/base'
 require_relative 'helpers'
 class DockerFriend < Sinatra::Base
@@ -17,6 +20,7 @@ class DockerFriend < Sinatra::Base
   set :bind, '0.0.0.0'
   set :port, 9292
 
+  use Rack::Session::Redis, redis_server: 'redis://redis'
 
 
 
@@ -36,7 +40,7 @@ class DockerFriend < Sinatra::Base
 
 
   before do
-    # session = 
+    # session =
     current_profile_expired?
 
     if !is_local_req?
@@ -82,7 +86,8 @@ class DockerFriend < Sinatra::Base
   end
 
   get %r|/latest/meta-data/iam/security-credentials/(.+)| do
-    print request.ip
+    p "Security creds PLUS"
+    p request.ip
     # requester_roles.log_requester request
     # if current_profile
     #   if params['captures'].first == current_role
@@ -96,24 +101,38 @@ class DockerFriend < Sinatra::Base
     #   end
     # end
   end
-  get %r|/latest/meta-data/iam/security-credentials/?$| do
-
+  get %r|^/config/current$| do
+    p "Config current"
     p request.ip
-    # redis.set("mykey", "hello world")
-    #
-    # p redis.get("mykey")
+  end
+  get %r|^/config/(.+)/?$| do
+    p "Config plus"
+    p request.ip
+  end
+  get %r|/latest/meta-data/iam/security-credentials/?$| do
+    p "Security creds QUESTION"
 
-    put("bostonians", {
-        shoey: "you"
-      })
-    p get("bostonians")
-    content_type 'text/json'
-    JSON.pretty_generate(Docker::Container.all(:all => true).map{|c| c.info})
-  #  if current_profile
-  #     if current_role
-  #       current_role
-  #     end
-  #   end
+    Docker::Container.all(:all => true).map{ |c|
+
+      pp request.ip
+      pp c.info["NetworkSettings"]["Networks"]
+      pp c.info["Image"]
+
+    }
+    ""
+    # {
+    #   Code: "Success",
+    #   LastUpdated: Time.new.utc.strftime("%Y-%m-%dT%H:%M:%SZ"),
+    #   Type: "AWS-HMAC",
+    #   AccessKeyId: data['Credentials']['AccessKeyId'],
+    #   SecretAccessKey: data['Credentials']['SecretAccessKey'],
+    #   Token: data['Credentials']['SessionToken'],
+    #   Expiration: data['Credentials']['Expiration']
+    # }
+
+    # content_type 'text/json'
+    # JSON.pretty_generate(Docker::Container.all(:all => true).map{|c| c.info})
+
   end
 
   get '/session' do
@@ -164,7 +183,7 @@ class DockerFriend < Sinatra::Base
     # get the creds
     creds = authenticate(params[:id], params[:role], params[:mfa])
     # push the creds into the container
-    p creds
+
     if creds[:err]
       content_type 'text/json'
       JSON.pretty_generate({err: true, res: creds[:res].to_s})

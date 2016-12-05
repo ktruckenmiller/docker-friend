@@ -26,16 +26,29 @@ module Sinatra
 
         session[:profiles] = profiles
       end
-
-      def put(name, obj)
-        redis = Redis.new(:host => "redis")
-        redis.set(name, obj.to_json)
-      end
-
-      def get(name)
-        redis = Redis.new(:host => "redis")
-        JSON.parse(redis.get(name))
-      end
+      # 
+      # def put(name, obj)
+      #   redis = Redis.new(:host => "redis")
+      #   newObj = Hash[name, obj]
+      #
+      #   oldObj = redis.get(session[:session_id])
+      #
+      #   if !oldObj.nil?
+      #     begin
+      #       oldObj = JSON.parse(oldObj)
+      #
+      #     p newObj
+      #     p oldObj
+      #     newObj = oldObj.merge(newObj)
+      #   end
+      #   redis.set(session[:session_id], newObj.to_json)
+      # end
+      #
+      # def get(name)
+      #   redis = Redis.new(:host => "redis")
+      #   obj = redis.get(session[:session_id])
+      #   obj[name]
+      # end
 
       def set_creds
 
@@ -186,7 +199,11 @@ module Sinatra
 
           final_str
         end
-
+      end
+      def get_session_token(container_id)
+        session[session[:current_profile]][:containers].find {  |c|
+            c['id'] == container_id
+        }['credentials'][:session_token]
       end
 
       def put_file_in_container(file, container_id)
@@ -202,7 +219,9 @@ module Sinatra
           user_dir = "/root"
         end
         begin
-          container.store_file(user_dir + "/.aws/credentials", file)
+          # container.store_file(user_dir + "/.aws/credentials", file)
+          p get_session_token(container_id)
+          p container.exec(['export AWS_SESSION_TOKEN=' + get_session_token(container_id)])
           {err: false, res: "Successfully stored in " + container_id}
         rescue Exception => e
           {err: true, res: e}

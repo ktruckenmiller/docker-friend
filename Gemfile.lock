@@ -24,6 +24,11 @@ GEM
     rack-test (0.6.3)
       rack (>= 1.0)
     redis (3.3.2)
+    redis-rack (1.6.0)
+      rack (~> 1.5)
+      redis-store (~> 1.2.0)
+    redis-store (1.2.0)
+      redis (>= 2.2)
     sinatra (1.4.7)
       rack (~> 1.5)
       rack-protection (~> 1.4)
@@ -46,6 +51,7 @@ DEPENDENCIES
   inifile
   rack
   redis
+  redis-rack
   sinatra
   sinatra-contrib
 

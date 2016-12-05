@@ -4,7 +4,7 @@ phases:
   pre_build:
     commands:
       - echo Logging in to Docker Hub...
-      - docker login --username="$DOCKER_HUB_USERNAME" --password="$DOCKER_HUB_PASSWORD"
+      - docker login --username="$(docker run ktruckenmiller/credstash credstash get dockercloud.username)" --password="$(docker run ktruckenmiller/credstash credstash get dockercloud.password)"
   build:
     commands:
       - echo Build started on `date`
