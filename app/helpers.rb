@@ -26,7 +26,7 @@ module Sinatra
 
         session[:profiles] = profiles
       end
-      # 
+      #
       # def put(name, obj)
       #   redis = Redis.new(:host => "redis")
       #   newObj = Hash[name, obj]
@@ -130,7 +130,9 @@ module Sinatra
 
       def get_mfa_device
         begin
+          p 'boston'
           res = iam.list_mfa_devices()
+          p res
           session[:mfa_device] = res.mfa_devices[0].serial_number
         rescue SignatureDoesNotMatch => e
           p e
@@ -154,6 +156,13 @@ module Sinatra
         containers = Docker::Container.all(:all => true)
         containers.map { |c|
           c.json
+        }
+      end
+
+      def get_images
+        images = Docker::Image.all()
+        images.map { |img|
+          img.json
         }
       end
 

@@ -1,0 +1,31 @@
+#images {
+  padding:20px;
+  .image_wrap {
+    .docker_image {
+      border:none;
+      transition: box-shadow .3s ease-in-out;
+      position:relative;
+      padding:8px 15px 8px 20px;
+      color:$dark_gray;
+      box-shadow: 0 2px 4px 0 rgba(0, 0, 0, 0.2), 0 25px 50px 0 rgba(0, 0, 0, 0.1);
+      background-color:white;
+      text-align:left;
+      display:flex;
+      justify-content: space-between;
+      // padding-bottom:50%;
+      h2 {
+        font-size:18px;
+        color:$black;
+      }
+      span {
+        position:absolute;
+        top:0;
+        bottom:0;
+        left:0px;
+        width:8px;
+            box-shadow: inset -2px 0px 1px rgba(0,0,0,.14);
+            background-color:$blue;
+      }
+    }
+  }
+}

@@ -10,7 +10,7 @@
       transition: box-shadow .3s ease-in-out;
       position:relative;
       padding:8px 15px 8px 20px;
-      color:black;
+      color:$dark_gray;
       box-shadow: 0 2px 4px 0 rgba(0, 0, 0, 0.2), 0 25px 50px 0 rgba(0, 0, 0, 0.1);
       background-color:white;
       text-align:left;
@@ -18,7 +18,7 @@
       justify-content: space-between;
       .names {
         h3 {
-
+          color:$black;
         }
         p {
           font-size:12px;

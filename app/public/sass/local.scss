@@ -15,44 +15,20 @@ code {
   background-color:rgba(123,123,123,.3);
   padding: 2px 4px;
 }
-
-
-.navbar {
-  padding:10px 20px 10px 20px;
+ul {
+  list-style-type:none;
   display:flex;
-  justify-content: space-between;
-  border-bottom:1px solid rgba(123,123,123,.8);
-  h2 {
-    font-size:16px;
+  flex-direction:row;
+  margin:0;padding:0;
+  li {
+
   }
-  .current_profile {
-    display:flex;
-    flex-direction: row;
-    .unset {
-      display:none;
-    }
-    .fa-caret-down {
-      padding:4px 12px;
-      cursor:pointer;
+}
 
-    }
 
-    &.elevated {
-      p, .fa-caret-down {
-        color:$blue;
 
-      }
-      .fa-caret-down {
-        &:hover {
-          color:$dark_blue;
-        }
-      }
-
-    }
-    form {
-      margin-bottom: 0;
-    }
-  }
+#containers, #images {
+  
 }
 .unset {
   // background-color:rgba(123,0,0,1);
