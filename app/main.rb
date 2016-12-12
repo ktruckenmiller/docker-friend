@@ -164,6 +164,27 @@ class DockerFriend < Sinatra::Base
     content_type 'text/json'
     JSON.pretty_generate(images)
   end
+  post '/images' do
+    if params[:command] == 'remove'
+
+      image = Docker::Image.get(params[:id])
+      p image
+      begin
+        res = image.remove(:force => true)
+        content_type 'text/json'
+        JSON.pretty_generate(get_images)
+      rescue Docker::Error::ConflictError
+        content_type 'text/json'
+        JSON.pretty_generate({
+            "err" => true,
+            "msg" => "Can't remove this. It has dependent images."
+          })
+      end
+
+    end
+
+
+  end
   get '/containers' do
     containers = get_containers
     content_type 'text/json'

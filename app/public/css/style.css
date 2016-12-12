@@ -483,24 +483,46 @@ ul {
 #images {
   padding: 20px; }
   #images .image_wrap .docker_image {
+    display: flex;
     border: none;
-    transition: box-shadow .3s ease-in-out;
     position: relative;
-    padding: 8px 15px 8px 20px;
+    padding: 8px 55px 8px 15px;
     color: #7b7b7b;
     box-shadow: 0 2px 4px 0 rgba(0, 0, 0, 0.2), 0 25px 50px 0 rgba(0, 0, 0, 0.1);
-    background-color: white;
+    background-color: #00aae5;
     text-align: left;
-    display: flex;
-    justify-content: space-between; }
+    transition: background-color .3s ease-in-out; }
+    #images .image_wrap .docker_image > * {
+      flex: 1; }
+    #images .image_wrap .docker_image p, #images .image_wrap .docker_image h2, #images .image_wrap .docker_image .closer {
+      transition: all .3s ease-in-out; }
+    #images .image_wrap .docker_image p {
+      margin-bottom: 0;
+      font-size: 12px;
+      color: white;
+      text-align: right; }
     #images .image_wrap .docker_image h2 {
+      text-shadow: -1px -1px 1px rgba(123, 123, 123, 0.2);
       font-size: 18px;
-      color: #464646; }
-    #images .image_wrap .docker_image span {
-      position: absolute;
-      top: 0;
-      bottom: 0;
-      left: 0px;
-      width: 8px;
-      box-shadow: inset -2px 0px 1px rgba(0, 0, 0, 0.14);
-      background-color: #00aae5; }
+      color: white; }
+    #images .image_wrap .docker_image .names {
+      flex: 2; }
+    #images .image_wrap .docker_image:hover {
+      background-color: rgba(255, 255, 255, 0.9); }
+      #images .image_wrap .docker_image:hover h2 {
+        color: #464646;
+        text-shadow: none; }
+      #images .image_wrap .docker_image:hover p {
+        color: #7b7b7b; }
+      #images .image_wrap .docker_image:hover .closer {
+        opacity: 1; }
+  #images .closer {
+    opacity: 0;
+    position: absolute;
+    right: 9px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 18px;
+    color: #00aae5; }
+    #images .closer i {
+      cursor: pointer; }

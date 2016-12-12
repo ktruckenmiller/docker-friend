@@ -177,28 +177,44 @@ $(document).ready(function() {
     });
     Vue.component('my-image', {
       props: ['image'],
+      methods: {
+        removeImage: function() {
+          dockerImage({
+            command: 'remove',
+            child: this
+          }, function(res) {
+            local.images = res
+          })
+        }
+      },
       computed: {
         imageName: function() {
           if(this.image.RepoTags[0]) {
             return this.image.RepoTags[0]
           }else {
-            return this.image.RepoDigests[0]
+            try {
+              return this.image.RepoDigests[0].split("@")[0]
+            }catch(e){
+              return this.image.Id.split(":")[1].substring(0,12)
+            }
+
           }
         },
         size: function() {
           return formatBytes(this.image.Size)
+        },
+        created: function() {
+          return moment(this.image.Created).fromNow();
         }
       },
       template: `
         <div class="docker_image box-row">
-          <span class="has_tag"></span>
           <div class="names">
             <h2>{{imageName}}</h2>
-            <p>{{size}}</p>
           </div>
-          <div class="controls">
-
-          </div>
+          <div class="closer"><i v-on:click="removeImage" class="fa fa-times" aria-hidden="true"></i></div>
+          <p>{{created}}</p>
+          <p>{{size}}</p>
         </div>
       `
     })
@@ -271,6 +287,8 @@ $(document).ready(function() {
     client.connect(function (err, res) {
         client.onUpdate = function (res) {
           local.containers = parseEvents(res)
+          // console.log(res.images);
+          // local.images = parseEvents(res.images)
         };
     });
 
@@ -322,6 +340,24 @@ $(document).ready(function() {
   }
 
 })
+function dockerImage(obj, cb) {
+  console.log(obj);
+  $.ajax({
+    url: '/images',
+    method: 'POST',
+    data: {
+      command: obj.command,
+      id: obj.child.image.Id
+    }
+  }).done(function(res) {
+    if(typeof(cb) === 'function') {
+      cb(res)
+    }else {
+      console.log("not a function");
+    }
+
+  })
+}
 function dockerRun(obj) {
   console.log(obj);
   $.ajax({
