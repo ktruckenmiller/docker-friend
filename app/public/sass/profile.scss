@@ -2,10 +2,6 @@
 
 
 
-
-.profile {
-  // margin: 4%;
-}
 .title {
   font-weight: 300;
   font-size: 18px;
@@ -20,41 +16,51 @@
   }
 }
 .help {
-  font-size:14px;
-  font-weight:100;
-  text-decoration: underline;
-  cursor:pointer;
-  text-align:center;
-  &:hover {
+
+
+
+  margin-top:10px;
+  padding-right:57px;
+  a {
+    text-align:right;
+    display:block;
+
+    text-decoration: underline;
+    font-size:14px;
+    font-weight:100;
+    width:100%;
+  }
+  a:hover {
     color:rgba(123,123,123,.9);
   }
 }
 #assumerole {
-  margin-top:40px;
+  margin-top:20vh;
 
   h2 {
-    text-shadow:-1px -1px 1px rgba(255,255,255,.5);
+    // text-shadow:-1px -1px 1px rgba(255,255,255,.5);
     // display:inline-block;
-    margin-bottom:10px;
-    font-size:2rem;
+    // margin-top:0px;
+    font-size:1.78rem;
     font-weight:100;
     width: 100%;
-    color:$dark_gray;
+    color:$black;
     text-align:center;
-    margin-bottom:20px;
+    margin-bottom:4px;
   }
   form {
     position:relative;
     overflow:hidden;
     min-width:0;
   }
-  .mfa, .region {
+
+  .mfa {
     /*background-color:rgba(0,170,229,1);*/
     transition: all .2s ease-in-out;
     color:rgba(123,123,123,.9);
     box-shadow:inset 1px 1px 1px rgba(12,12,12,.3);
     width:100%;
-    border-radius:32px;
+    border-radius:4px;
     font-weight:100;
     font-size:26px;
     text-align:center;
@@ -64,30 +70,23 @@
       outline:none;
     }
   }
+  .mfa {
+    width:290px;
+    margin-top:10px;
+    color:$black;
+  }
   .box {
     background:transparent;
     border:transparent;
     padding:0;
   }
   .button {
-    // background-color:rgba(0,170,229,1);
-    // transition: all .2s ease-in-out;
-    // color:white;
-    // border-radius:32px;
-    // font-weight:100;
-    // font-size:26px;
-    // text-align:center;
-    // margin-bottom:10px;
-    // margin-top:0;
-    // border:none;
-    // border: 1px solid $blue;
-    // margin:0 0 0 0;
     width:290px;
     margin:10px;
     border:transparent;
     background-color:$blue;
     border-radius: 4px;
-    box-shadow:1px 1px 0px rgba(117,117,122,.3);
+    box-shadow:1px 1px 1px rgba(117,117,122,.3);
     color:white;
     font-weight:100;
     margin-bottom:0px;

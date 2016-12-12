@@ -175,16 +175,80 @@ $(document).ready(function() {
         }
       }
     });
+    Vue.component('my-image', {
+      props: ['image'],
+      methods: {
+        removeImage: function() {
+          dockerImage({
+            command: 'remove',
+            child: this
+          }, function(res) {
+            local.images = res
+          })
+        }
+      },
+      computed: {
+        imageName: function() {
+          if(this.image.RepoTags[0]) {
+            return this.image.RepoTags[0]
+          }else {
+            try {
+              return this.image.RepoDigests[0].split("@")[0]
+            }catch(e){
+              return this.image.Id.split(":")[1].substring(0,12)
+            }
 
-    var containers = new Vue({
-      el: '#the_component',
+          }
+        },
+        size: function() {
+          return formatBytes(this.image.Size)
+        },
+        created: function() {
+          return moment(this.image.Created).fromNow();
+        }
+      },
+      template: `
+        <div class="docker_image box-row">
+          <div class="names">
+            <h2>{{imageName}}</h2>
+          </div>
+          <div class="closer"><i v-on:click="removeImage" class="fa fa-times" aria-hidden="true"></i></div>
+          <p>{{created}}</p>
+          <p>{{size}}</p>
+        </div>
+      `
+    })
+    Vue.component('my-subnav', {
+      props: ['currentPage', 'subpage', 'changeSubpage'],
+      computed: {
+        isContainer: function() { return this.subpage === 'containers' },
+        isImage: function() { return this.subpage === 'images' }
+      },
+      template: `
+      <div class="subnav">
+        <ul v-if="currentPage === '/local'" class="local">
+          <li v-on:click="changeSubpage" v-bind:class="{active: isContainer}"><i class="fa fa-braille" aria-hidden="true"></i>containers</li>
+          <li v-on:click="changeSubpage" v-bind:class="{active: isImage}"><i class="fa fa-codepen" aria-hidden="true"></i>images</li>
+        </ul>
+        <ul v-if="currentPage === '/cloud'" class="cloud">
+          <li class="build">build</li>
+          <li class="deploy">deployed</li>
+        </ul>
+      </div>
+      `
+    })
+    var local = new Vue({
+      el: '#main',
       data: {
+        images: [],
         containers: [],
         cleaned_containers: [],
+        cleaned_images: [],
         editing: '',
         current: {
           container: {},
-          aws: {}
+          aws: {},
+          subpage: "containers"
         },
         roles: [],
         role_prefix: ""
@@ -194,6 +258,11 @@ $(document).ready(function() {
           return this.containers.map(function(container) {
               container.Name = container.Name.replace("/", "")
               return container
+          })
+        },
+        cleaned_images: function () {
+          return this.images.map(function(image) {
+            return image
           })
         }
       },
@@ -205,6 +274,10 @@ $(document).ready(function() {
 
           this.current.container = _.assignIn(this.current.container, obj);
           this.editing = type;
+        },
+        changeSubpage: function(e) {
+            let name = e.currentTarget.innerText;
+            if(name) {this.current.subpage = name}
         }
       }
     })
@@ -213,7 +286,9 @@ $(document).ready(function() {
     var client = new Nes.Client('ws://localhost:8080');
     client.connect(function (err, res) {
         client.onUpdate = function (res) {
-          containers.containers = parseEvents(res)
+          local.containers = parseEvents(res)
+          // console.log(res.images);
+          // local.images = parseEvents(res.images)
         };
     });
 
@@ -223,7 +298,7 @@ $(document).ready(function() {
         return cont.Names[0] === '/docker-friend' || cont.Names[0] === '/docker-events'
       })
       return newArr.map(function(cont) {
-        var oldCont = _.find(containers.containers, function(c) {
+        var oldCont = _.find(local.containers, function(c) {
           return c.Id === cont.Id
         })
         return _.assignIn(oldCont, {
@@ -243,22 +318,46 @@ $(document).ready(function() {
     $.ajax({
       url: '/containers'
     }).done(function(res) {
-      containers.containers = _.reject(res, function(cont) {
-        return cont.Name === '/docker-friend' || cont.Name === '/docker-events'
+      local.containers = _.reject(res, function(cont) {
+        return cont.Name === '/docker-friend' || cont.Name === '/docker-events' || cont.Name == '/docker-friend-redis'
       })
+    })
+    $.ajax({
+      url: '/images'
+    }).done(function(res) {
+      console.log(res);
+      local.images = res
     })
     $.ajax({
       url: '/roles'
     }).done(function(res) {
-      containers.roles = _.map(res, function(role) {
+      local.roles = _.map(res, function(role) {
         return role.split(':role/')[1]
       });
-      containers.rolePrefix = res[0].split(':role/')[0] + ':role/'
+      local.rolePrefix = res[0].split(':role/')[0] + ':role/'
 
     })
   }
 
 })
+function dockerImage(obj, cb) {
+  console.log(obj);
+  $.ajax({
+    url: '/images',
+    method: 'POST',
+    data: {
+      command: obj.command,
+      id: obj.child.image.Id
+    }
+  }).done(function(res) {
+    if(typeof(cb) === 'function') {
+      cb(res)
+    }else {
+      console.log("not a function");
+    }
+
+  })
+}
 function dockerRun(obj) {
   console.log(obj);
   $.ajax({
@@ -269,16 +368,22 @@ function dockerRun(obj) {
       id: obj.child.container.Id
     }
   }).done(function(res) {
-    // check for errs?
+    console.log(res)
   })
 }
 
+function formatBytes(bytes) {
+   if(bytes == 0) return '0 Byte';
+   var k = 1000;
+   var sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
+   var i = Math.floor(Math.log(bytes) / Math.log(k));
+   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
 
 function processForm(e) {
   var profile_mfa = $('#assumerole .form .mfa')[0].value;
   var profile = e.target.value;
 
-  console.log(profile, profile_mfa);
 
   $('#logging_in').addClass('opening');
   $.ajax({
@@ -290,7 +395,7 @@ function processForm(e) {
     }
   }).done(function(res) {
     if(!res.err) {
-      window.location = '/profile'
+      window.location = '/local'
     }
   })
 

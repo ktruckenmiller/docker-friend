@@ -55,10 +55,12 @@ class DockerFriend < Sinatra::Base
 
   get '/' do
     if session[:elevated]
-      redirect '/profile', 303
+      redirect '/local', 303
     else
       erb :main_layout, :layout => false do
-        erb :profile, { locals: { profiles: session[:profiles] } }
+        erb :profile, {
+          locals: { profiles: session[:profiles] }
+        }
       end
     end
   end
@@ -74,15 +76,28 @@ class DockerFriend < Sinatra::Base
     JSON.pretty_generate(res)
   end
 
-  get '/profile' do
+  get '/local' do
     if session[:current_profile]
-
       erb :main_layout, :layout => false do
-        erb :index, { locals: { current_profile: session[:current_profile] } }
+        @current_profile = session[:current_profile]
+        erb :local do
+          @cloud = true
+          erb :navbar
+        end
       end
     else
       redirect '/', 303
     end
+  end
+
+  get '/cloud' do
+    erb :main_layout do
+      erb :cloud do
+        @active = 'cloud'
+        erb :navbar
+      end
+    end
+
   end
 
   get %r|/latest/meta-data/iam/security-credentials/(.+)| do
@@ -144,7 +159,32 @@ class DockerFriend < Sinatra::Base
     content_type 'text/json'
     JSON.pretty_generate(get_roles)
   end
+  get '/images' do
+    images = get_images
+    content_type 'text/json'
+    JSON.pretty_generate(images)
+  end
+  post '/images' do
+    if params[:command] == 'remove'
 
+      image = Docker::Image.get(params[:id])
+      p image
+      begin
+        res = image.remove(:force => true)
+        content_type 'text/json'
+        JSON.pretty_generate(get_images)
+      rescue Docker::Error::ConflictError
+        content_type 'text/json'
+        JSON.pretty_generate({
+            "err" => true,
+            "msg" => "Can't remove this. It has dependent images."
+          })
+      end
+
+    end
+
+
+  end
   get '/containers' do
     containers = get_containers
     content_type 'text/json'
@@ -209,8 +249,6 @@ class DockerFriend < Sinatra::Base
     end
   end
 
-  post '/profile' do
 
-  end
 
 end
