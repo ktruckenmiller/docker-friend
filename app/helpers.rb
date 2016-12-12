@@ -26,7 +26,7 @@ module Sinatra
 
         session[:profiles] = profiles
       end
-      # 
+      #
       # def put(name, obj)
       #   redis = Redis.new(:host => "redis")
       #   newObj = Hash[name, obj]
@@ -160,7 +160,7 @@ module Sinatra
       def authenticate(container_id, role, mfa_token)
         begin
           if session[:elevated]
-            res = sts.assume_role({role_arn: role, serial_number: session[:mfa_device], duration_seconds: 129600, token_code: mfa_token, role_session_name: container_id})
+            res = sts.assume_role({role_arn: role, serial_number: session[:mfa_device], duration_seconds: 3600, token_code: mfa_token, role_session_name: container_id})
           else
             res = sts.assume_role({role_arn: role, serial_number: session[:mfa_device], duration_seconds: 3600, token_code: mfa_token, role_session_name: container_id})
           end
@@ -219,9 +219,9 @@ module Sinatra
           user_dir = "/root"
         end
         begin
-          # container.store_file(user_dir + "/.aws/credentials", file)
-          p get_session_token(container_id)
-          p container.exec(['export AWS_SESSION_TOKEN=' + get_session_token(container_id)])
+          container.store_file(user_dir + "/.aws/credentials", file)
+          # p get_session_token(container_id)
+          # p container.exec(['export AWS_SESSION_TOKEN=' + get_session_token(container_id)])
           {err: false, res: "Successfully stored in " + container_id}
         rescue Exception => e
           {err: true, res: e}

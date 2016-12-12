@@ -17,7 +17,7 @@ services:
       - RACK_ENV=development
     ports:
       - 8010:9292
-      - 169.254.169.254:80:9292
+      # - 169.254.169.254:9292
     restart: always
     links:
       - redis
