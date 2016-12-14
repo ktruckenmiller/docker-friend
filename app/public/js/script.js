@@ -139,7 +139,7 @@ $(document).ready(function() {
       },
       computed: {
         ha_container: function() {
-          return this.container.Name === 'docker-friend' || this.container.Name === 'docker-events'
+          return this.container.Name === 'docker-friend' || this.container.Name === 'docker-events' || this.container.Name === 'docker-friend-redis'
         }
       },
       methods: {
@@ -212,7 +212,7 @@ $(document).ready(function() {
           <div class="names">
             <h2>{{imageName}}</h2>
           </div>
-          <div class="closer"><i v-on:click="removeImage" class="fa fa-times" aria-hidden="true"></i></div>
+          <div class="closer"><i v-on:click="removeImage" class="fa fa-trash" aria-hidden="true"></i></div>
           <p>{{created}}</p>
           <p>{{size}}</p>
         </div>
@@ -229,6 +229,10 @@ $(document).ready(function() {
         <ul v-if="currentPage === '/local'" class="local">
           <li v-on:click="changeSubpage" v-bind:class="{active: isContainer}"><i class="fa fa-braille" aria-hidden="true"></i>containers</li>
           <li v-on:click="changeSubpage" v-bind:class="{active: isImage}"><i class="fa fa-codepen" aria-hidden="true"></i>images</li>
+        </ul>
+        <ul v-if="currentPage === '/local' && isContainer" class="local removers">
+          <li>Remove Exited</li>
+          <li>Remove All</li>
         </ul>
         <ul v-if="currentPage === '/cloud'" class="cloud">
           <li class="build">build</li>
@@ -295,7 +299,7 @@ $(document).ready(function() {
     function parseEvents(res) {
       var newArr = JSON.parse(res);
       newArr = _.reject(newArr, function(cont) {
-        return cont.Names[0] === '/docker-friend' || cont.Names[0] === '/docker-events'
+        return cont.Names[0] === '/docker-friend' || cont.Names[0] === '/docker-events' || cont.Names[0] === 'docker-friend-redis'
       })
       return newArr.map(function(cont) {
         var oldCont = _.find(local.containers, function(c) {
@@ -325,7 +329,6 @@ $(document).ready(function() {
     $.ajax({
       url: '/images'
     }).done(function(res) {
-      console.log(res);
       local.images = res
     })
     $.ajax({

@@ -82,7 +82,9 @@
       align-items:center;
       min-height:60px;
     }
-
+    .roles {
+      flex-direction:column;
+    }
   }
   .controls {
     justify-content:flex-end;
