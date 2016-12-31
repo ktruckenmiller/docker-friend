@@ -139,7 +139,7 @@ $(document).ready(function() {
       },
       computed: {
         ha_container: function() {
-          return this.container.Name === 'docker-friend' || this.container.Name === 'docker-events'
+          return this.container.Name === 'docker-friend' || this.container.Name === 'docker-events' || this.container.Name === 'docker-friend-redis'
         }
       },
       methods: {
@@ -212,31 +212,57 @@ $(document).ready(function() {
           <div class="names">
             <h2>{{imageName}}</h2>
           </div>
-          <div class="closer"><i v-on:click="removeImage" class="fa fa-times" aria-hidden="true"></i></div>
+          <div class="closer"><i v-on:click="removeImage" class="fa fa-trash" aria-hidden="true"></i></div>
           <p>{{created}}</p>
           <p>{{size}}</p>
         </div>
       `
     })
     Vue.component('my-subnav', {
-      props: ['currentPage', 'subpage', 'changeSubpage'],
+      props: ['currentPage', 'subpage', 'changeLocalSubpage', 'changeCloudSubpage'],
       computed: {
-        isContainer: function() { return this.subpage === 'containers' },
-        isImage: function() { return this.subpage === 'images' }
+        isContainer: function() { return this.subpage.local === 'containers'; },
+        isImage: function() { return this.subpage.local === 'images' },
+        isCommit: function() {return this.subpage.cloud === 'commit' },
+        isBuild:  function() {return this.subpage.cloud === 'build' },
+        isDeploy:  function() {return this.subpage.cloud === 'deploy' }
       },
       template: `
       <div class="subnav">
         <ul v-if="currentPage === '/local'" class="local">
-          <li v-on:click="changeSubpage" v-bind:class="{active: isContainer}"><i class="fa fa-braille" aria-hidden="true"></i>containers</li>
-          <li v-on:click="changeSubpage" v-bind:class="{active: isImage}"><i class="fa fa-codepen" aria-hidden="true"></i>images</li>
+          <li v-on:click="changeLocalSubpage" v-bind:class="{active: isContainer}"><i class="fa fa-braille" aria-hidden="true"></i>containers</li>
+          <li v-on:click="changeLocalSubpage" v-bind:class="{active: isImage}"><i class="fa fa-codepen" aria-hidden="true"></i>images</li>
+        </ul>
+        <ul v-if="currentPage === '/local' && isContainer" class="local removers">
+          <li>Remove Exited</li>
+          <li>Remove All</li>
         </ul>
         <ul v-if="currentPage === '/cloud'" class="cloud">
-          <li class="build">build</li>
-          <li class="deploy">deployed</li>
+          <li v-on:click="changeCloudSubpage" v-bind:class="{active: isCommit}"><i class="fa fa-github" aria-hidden="true"></i>commit</li>
+          <li v-on:click="changeCloudSubpage" v-bind:class="{active: isBuild}"><i class="fa fa-wrench" aria-hidden="true"></i>build</li>
+          <li v-on:click="changeCloudSubpage" v-bind:class="{active: isDeploy}"><i class="fa fa-server" aria-hidden="true"></i>deploy</li>
         </ul>
       </div>
       `
-    })
+    });
+    Vue.component('my-code', {
+      template: `
+        <div>Mycode</div>
+      `
+    });
+    Vue.component('my-deploys', {
+      template: `
+        <div> my deploys yo</div>
+      `
+    });
+    Vue.component('my-builds', {
+      template: `
+        <div>my builds yo</div>
+      `
+    });
+
+
+
     var local = new Vue({
       el: '#main',
       data: {
@@ -248,7 +274,10 @@ $(document).ready(function() {
         current: {
           container: {},
           aws: {},
-          subpage: "containers"
+          subpage:{
+            local: 'containers',
+            cloud: 'deploy'
+          }
         },
         roles: [],
         role_prefix: ""
@@ -271,13 +300,16 @@ $(document).ready(function() {
           this.editing = ''
         },
         openModal: function(type, obj) {
-
           this.current.container = _.assignIn(this.current.container, obj);
           this.editing = type;
         },
-        changeSubpage: function(e) {
+        changeCloudSubpage: function(e) {
             let name = e.currentTarget.innerText;
-            if(name) {this.current.subpage = name}
+            if(name) {this.current.subpage.cloud = name}
+        },
+        changeLocalSubpage: function(e) {
+            let name = e.currentTarget.innerText;
+            if(name) {this.current.subpage.local = name}
         }
       }
     })
@@ -295,7 +327,7 @@ $(document).ready(function() {
     function parseEvents(res) {
       var newArr = JSON.parse(res);
       newArr = _.reject(newArr, function(cont) {
-        return cont.Names[0] === '/docker-friend' || cont.Names[0] === '/docker-events'
+        return cont.Names[0] === '/docker-friend' || cont.Names[0] === '/docker-events' || cont.Names[0] === 'docker-friend-redis'
       })
       return newArr.map(function(cont) {
         var oldCont = _.find(local.containers, function(c) {
@@ -325,7 +357,6 @@ $(document).ready(function() {
     $.ajax({
       url: '/images'
     }).done(function(res) {
-      console.log(res);
       local.images = res
     })
     $.ajax({

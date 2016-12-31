@@ -74,6 +74,8 @@
       justify-content: space-between;
       align-items: center;
       min-height: 60px; }
+    .modal_overlay .modal .roles {
+      flex-direction: column; }
   .modal_overlay .controls {
     justify-content: flex-end;
     display: flex; }
@@ -260,7 +262,9 @@
   padding-top: 70px;
   padding: 76px 0 10px 20px;
   position: relative;
-  background-color: #00aae5; }
+  background-color: #00aae5;
+  display: flex;
+  justify-content: space-between; }
   .subnav ul.active {
     display: flex; }
   .subnav ul li {
@@ -284,6 +288,17 @@
       box-shadow: inset 1px 1px 1px rgba(0, 0, 0, 0.2);
       background-color: white;
       color: #00aae5; }
+  .subnav .removers li {
+    background-color: #ed4c57;
+    transition: box-shadow .2s ease-in-out;
+    margin-left: 0px; }
+    .subnav .removers li:hover {
+      color: white;
+      box-shadow: 1px 1px 2px rgba(12, 12, 12, 0.3); }
+    .subnav .removers li:active {
+      background-color: #b2382d;
+      transition: box-shadow .05s ease-in-out;
+      box-shadow: 0px 0px 0px rgba(12, 12, 12, 0.3); }
 
 .title {
   font-weight: 300;
@@ -488,10 +503,9 @@ ul {
     position: relative;
     padding: 8px 55px 8px 15px;
     color: #7b7b7b;
-    box-shadow: 0 2px 4px 0 rgba(0, 0, 0, 0.2), 0 25px 50px 0 rgba(0, 0, 0, 0.1);
     background-color: #00aae5;
     text-align: left;
-    transition: background-color .3s ease-in-out; }
+    transition: all .3s ease-in-out; }
     #images .image_wrap .docker_image > * {
       flex: 1; }
     #images .image_wrap .docker_image p, #images .image_wrap .docker_image h2, #images .image_wrap .docker_image .closer {
@@ -508,20 +522,15 @@ ul {
     #images .image_wrap .docker_image .names {
       flex: 2; }
     #images .image_wrap .docker_image:hover {
-      background-color: rgba(255, 255, 255, 0.9); }
-      #images .image_wrap .docker_image:hover h2 {
-        color: #464646;
-        text-shadow: none; }
-      #images .image_wrap .docker_image:hover p {
-        color: #7b7b7b; }
+      box-shadow: 0 5px 4px 0 rgba(0, 0, 0, 0.2), 0 25px 50px 0 rgba(0, 0, 0, 0.1); }
       #images .image_wrap .docker_image:hover .closer {
+        color: white;
         opacity: 1; }
   #images .closer {
     opacity: 0;
     position: absolute;
     right: 9px;
-    top: 50%;
-    transform: translateY(-50%);
+    top: 9px;
     font-size: 18px;
     color: #00aae5; }
     #images .closer i {

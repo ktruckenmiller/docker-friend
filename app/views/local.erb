@@ -4,12 +4,13 @@
   <my-subnav
     current-page="<%= request.path_info %>"
     v-bind:subpage="current.subpage"
-    v-bind:change-subpage="changeSubpage">
+    v-bind:change-cloud-subpage="changeCloudSubpage"
+    v-bind:change-local-subpage="changeLocalSubpage">
 
   </my-subnav>
 
 
-  <div v-if="current.subpage === 'images'" id="images" class="row">
+  <div v-if="current.subpage.local === 'images'" id="images" class="row">
     <div v-for="image in cleaned_images" class="image_wrap col-lg-6 col-sm-6 col-xs-12">
       <my-image
         :image="image"
@@ -18,7 +19,7 @@
     </div>
 
   </div>
-  <div v-if="current.subpage === 'containers'" id="containers" class="row">
+  <div v-if="current.subpage.local === 'containers'" id="containers" class="row">
     <div v-for="container in cleaned_containers" class="container_wrap col-lg-6 col-sm-12 col-xs-12">
       <my-container
         :container="container"

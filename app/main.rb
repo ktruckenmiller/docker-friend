@@ -236,6 +236,11 @@ class DockerFriend < Sinatra::Base
 
   end
 
+  get '/deploys' do
+    dynamo = AWS::Aws::DynamoDB::Client.new
+
+  end
+
   get '/restart' do
     erb :restart
   end
