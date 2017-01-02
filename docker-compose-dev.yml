@@ -10,7 +10,7 @@ services:
       context: .
     volumes:
       - ./:/code
-      - ~/.aws:/root/.aws
+      - ~/.aws:/root/.aws:ro
     volumes_from:
       - events
     environment:
