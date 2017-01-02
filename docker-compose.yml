@@ -6,7 +6,7 @@ services:
       - events
     image: ktruckenmiller/docker-friend
     volumes:
-      - ~/.aws:/root/.aws
+      - ~/.aws:/root/.aws:ro
     volumes_from:
       - events
     ports:
