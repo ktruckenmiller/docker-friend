@@ -219,6 +219,18 @@ class DockerFriend < Sinatra::Base
     content_type 'text/json'
     JSON.pretty_generate(res)
   end
+
+  get '/commits' do
+    dynamo = Aws::DynamoDB::Client.new(region: ENV['REGION'])
+    commits = dynamo.scan(
+      table_name: ENV['EVENTS_TABLE'],
+      limit: 10,
+      select: "ALL_ATTRIBUTES"
+    )
+    content_type 'text/json'
+    JSON.pretty_generate(commits.items)
+  end
+
   post '/assume' do
     # get the creds
     creds = authenticate(params[:id], params[:role], params[:mfa])

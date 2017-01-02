@@ -7,7 +7,11 @@
     v-bind:change-local-subpage="changeLocalSubpage">
   </my-subnav>
   <my-builds v-if="current.subpage.cloud === 'build'"></my-builds>
-  <my-code v-if="current.subpage.cloud === 'commit'"></my-code>
+  <my-code
+     v-if="current.subpage.cloud === 'commit'"
+     :commits="commits">
+
+  </my-code>
   <my-deploys v-if="current.subpage.cloud === 'deploy'" ></my-depoys>
 
 </div>
