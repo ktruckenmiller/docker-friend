@@ -372,7 +372,7 @@ $(document).ready(function() {
               local.commits = data;
           },
           error: function (error) {
-              alert(JSON.stringify(error));
+              console.log("Can't find the cloud provider commit table");
           }
       });
     }
