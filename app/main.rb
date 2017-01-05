@@ -222,10 +222,17 @@ class DockerFriend < Sinatra::Base
 
   get '/commits' do
     dynamo = Aws::DynamoDB::Client.new(region: ENV['REGION'])
-    commits = dynamo.scan(
+    commits = dynamo.query(
       table_name: ENV['EVENTS_TABLE'],
-      limit: 10,
-      select: "ALL_ATTRIBUTES"
+      index_name: 'tagLSI',
+      key_condition_expression: "#event = :event",
+      expression_attribute_names: {
+        "#event" => "event_type"
+      },
+      expression_attribute_values: {
+        ":event" => "git_tag"
+      },
+      scan_index_forward: false
     )
     content_type 'text/json'
     JSON.pretty_generate(commits.items)

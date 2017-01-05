@@ -15,7 +15,7 @@ services:
       - events
     environment:
       - RACK_ENV=development
-      - EVENTS_TABLE=events-table-EventsTable-1DEO4ALJ6IORA
+      - EVENTS_TABLE=events-table-EventDb-VBTRJR26RPRS
       - REGION=us-west-2
     ports:
       - 8010:9292

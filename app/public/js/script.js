@@ -247,19 +247,10 @@ $(document).ready(function() {
     });
     Vue.component('my-code', {
       props: ['commits'],
-      computed: {
-        computed_commits: function() {
-          return _.map(this.commits, function(val) {
-            console.log(val.date_created);
-            val.date_created = moment(val.date_created).fromNow();
-            return val
-          })
-        }
-      },
       template: `
         <div>
           <div v-if="commits.length == 0">loading...</div>
-          <div v-for="commit in computed_commits" class="col-lg-6 col-sm-12 col-xs-12">
+          <div v-for="commit in commits" class="col-lg-6 col-sm-12 col-xs-12">
             {{commit.repo_name}}
             {{commit.tag}}
             {{commit.date_created}}
@@ -368,11 +359,18 @@ $(document).ready(function() {
           url: '/commits',
           method: 'GET',
           success: function (data) {
-            console.log(data);
-              local.commits = data;
+              var new_data = _.map(data, function(val) {
+
+                console.log(val.date_created);
+
+                val.date_created = moment(val.date_created).fromNow();
+                return val
+              })
+              local.commits = new_data;
           },
           error: function (error) {
-              alert(JSON.stringify(error));
+            console.log(error);
+              // alert(JSON.stringify(error));
           }
       });
     }
