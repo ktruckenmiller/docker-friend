@@ -369,12 +369,7 @@ $(document).ready(function() {
               local.commits = new_data;
           },
           error: function (error) {
-<<<<<<< HEAD
-            console.log(error);
-              // alert(JSON.stringify(error));
-=======
               console.log("Can't find the cloud provider commit table");
->>>>>>> efda13f4f38e2f19ff4cba5023411844d02286d3
           }
       });
     }
