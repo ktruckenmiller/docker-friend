@@ -1,10 +1,11 @@
 version: 0.1
-
 phases:
-  pre_build:
+  install:
     commands:
       - echo installing credstash
       - pip install credstash
+  pre_build:
+    commands:
       - echo Logging in to Docker Hub...
       - docker login --username="$(credstash -r us-west-2 get dockercloud.username)" --password="$(credstash -r us-west-2 get dockercloud.password)"
   build:
@@ -17,4 +18,5 @@ phases:
       - docker push $ORG_NAME/$IMAGE_NAME:$IMAGE_TAG
   post_build:
     commands:
-      - docker push docker-events:$IMAGE_TAG
+      - echo $ACTIVITY_ID
+      - echo
