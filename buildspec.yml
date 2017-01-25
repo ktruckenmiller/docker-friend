@@ -6,7 +6,7 @@ phases:
       - pip install credstash
   pre_build:
     commands:
-      - echo Logging in to Docker Hub...
+      - echo Logging in to Docker Hub....
       - docker login --username="$(credstash -r us-west-2 get dockercloud.username)" --password="$(credstash -r us-west-2 get dockercloud.password)"
   build:
     commands:
