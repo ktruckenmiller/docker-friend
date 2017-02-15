@@ -334,9 +334,10 @@ $(document).ready(function() {
     });
 
     function parseEvents(res) {
-      var newArr = JSON.parse(res);
+      var newArr = JSON.parse(res.containers);
       newArr = _.reject(newArr, function(cont) {
-        return cont.Names[0] === '/docker-friend' || cont.Names[0] === '/docker-events' || cont.Names[0] === 'docker-friend-redis'
+
+        return cont.Names[0] === '/docker-friend' || cont.Names[0] === '/docker-events' || cont.Names[0] === '/docker-friend-redis'
       })
       return newArr.map(function(cont) {
         var oldCont = _.find(local.containers, function(c) {
@@ -360,9 +361,6 @@ $(document).ready(function() {
           method: 'GET',
           success: function (data) {
               var new_data = _.map(data, function(val) {
-
-                console.log(val.date_created);
-
                 val.date_created = moment(val.date_created).fromNow();
                 return val
               })
@@ -380,6 +378,7 @@ $(document).ready(function() {
       url: '/containers'
     }).done(function(res) {
       local.containers = _.reject(res, function(cont) {
+
         return cont.Name === '/docker-friend' || cont.Name === '/docker-events' || cont.Name == '/docker-friend-redis'
       })
     })
@@ -401,7 +400,6 @@ $(document).ready(function() {
 
 })
 function dockerImage(obj, cb) {
-  console.log(obj);
   $.ajax({
     url: '/images',
     method: 'POST',
@@ -419,7 +417,6 @@ function dockerImage(obj, cb) {
   })
 }
 function dockerRun(obj) {
-  console.log(obj);
   $.ajax({
     url: '/containers',
     method: 'POST',
