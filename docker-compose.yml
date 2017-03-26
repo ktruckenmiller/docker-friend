@@ -1,0 +1,21 @@
+version: '3'
+
+services:
+  docker-friend:
+    container_name: docker-friend
+    image: ktruckenmiller/dockerfriend
+    privileged: true
+    volumes:
+      - ./:/code
+      - ~/.aws:/root/.aws:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+    network_mode: host
+  frontend:
+    container_name: docker-friend-nginx
+    depends_on:
+      - docker-friend
+    image: nginx
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf
+    ports:
+      - 127.0.0.1:8009:80

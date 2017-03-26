@@ -1,0 +1,66 @@
+
+$red: rgb(237, 76, 87);
+$dark_red: rgb(178, 56, 45);
+$blue: rgb(0,170,229);
+$dark_blue: rgb(0,78,123);
+$light_blue: rgb(145,223,255);
+// $light_gray: transparent);
+$gray: rgba(123,123,123,.3);
+$dark_gray: rgba(123,123,123,1);
+$black: rgb(70,70,70);
+$green: rgba(0,200,0,.9);
+$yellow: rgba(232, 244, 6,1);
+
+
+/* Move down content because we have a fixed navbar that is 50px tall */
+html, body, h1, p, h2, h3 {
+  padding:0;margin:0;
+  font-weight: 300;
+
+}
+html {
+  background: linear-gradient(to bottom,  rgba(188,188,188,.6) 0%,rgba(229,229,229,0.06) 100%); /* W3C, IE10+, FF16+, Chrome26+, Opera12+, Safari7+ */
+  background-attachment: fixed;
+}
+body {
+  background-color:transparent;
+  font-family: 'Open Sans', sans-serif;
+}
+
+a {
+  color:rgba(0,170,229,1);
+  outline: 0 !important;
+}
+code {
+  background-color:rgba(123,123,123,.3);
+  padding: 2px 4px;
+}
+ul {
+  list-style-type:none;
+  display:flex;
+  flex-direction:row;
+  margin:0;padding:0;
+  li {
+
+  }
+}
+.unset {
+  // background-color:rgba(123,0,0,1);
+  border:none;
+  background-color:transparent;
+  color:rgba(123,0,0,1);
+  border-radius:10px;
+  transition: background-color .1s ease-in-out;
+  margin:2px 0 10px 14px;
+  font-size:12px;
+  &:hover {
+    color:rgba(40,0,0,1);
+    cursor:pointer;
+  }
+}
+.fade-enter-active, .fade-leave-active {
+  transition: opacity .5s
+}
+.fade-enter, .fade-leave-active {
+    opacity: 0
+}
