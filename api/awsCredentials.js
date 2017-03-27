@@ -34,24 +34,19 @@ const AWSCredentials = (function() {
   }
   var setMFAAuth = function(serial, token) {
     const params = {
-      DurationSeconds: 43200,
+      DurationSeconds: 129600,
       SerialNumber: serial,
       TokenCode: token
     }
     return sts.getSessionToken(params).promise()
   }
   var setAWSBase = function(cb) {
-    db.profile.find({currentProfile: true}, function(err, data) {
-      let profileObj = data[0]
-      let new_creds = new AWS.SharedIniFileCredentials({profile: profileObj.profileName})
-      AWS.config.credentials = new_creds
+    db.profile.findOne({currentProfile: true}, function(err, data) {
+      let profileObj = data
       if(Date.parse(data.Expiration) > new Date().getTime()) {
-        AWS.config.credentials = sts.credentialsFrom({
-          AccessKeyId: data.AccessKeyId,
-          SecretAccessKey: data.SecretAccessKey,
-          SessionToken: data.SessionToken,
-          Expiration: data.Expiration
-        });
+        AWS.config.credentials = new AWS.Credentials(data.AccessKeyId, data.SecretAccessKey, data.SessionToken)
+      }else {
+        AWS.config.credentials = new AWS.SharedIniFileCredentials({profile: profileObj.profileName})
       }
       if(typeof(cb) === 'function') {
         cb()
@@ -89,14 +84,12 @@ const AWSCredentials = (function() {
     }).value()[0]
   }
   var refreshCredentials = function(ipAddress, cb) {
-    console.log(colors.yellow("Creds expired, refreshing them."))
+
     db.containers.findOne({ip: ipAddress}, function(err, container) {
       if (!err && container.roleArn) {
-        sts.getCallerIdentity(function(err,data) {
-          console.log("get caller identity")
-          console.log(data)
-        })
-        sts.assumeRole({
+        console.log(colors.yellow("Creds expired for "+container.containerName+", refreshing them."))
+        let new_sts = new AWS.STS()
+        new_sts.assumeRole({
           DurationSeconds: 3600,
           RoleArn: container.roleArn,
           RoleSessionName: container.containerName
@@ -107,13 +100,10 @@ const AWSCredentials = (function() {
               cb(err, res.Credentials)
             })
           }else {
-            console.log(res)
             console.log(colors.red(err, res))
             cb(err, res)
           }
         })
-      }else {
-
       }
     })
   }
@@ -121,11 +111,14 @@ const AWSCredentials = (function() {
     let params = {}
     function getRoles(newParams) {
       iam.listRoles(newParams, function(err, data) {
-        if(!err && data.IsTruncated) {
+
+        if(!err && data.Roles) {
           _.each(data.Roles, function(role) {
             db.roles.update({RoleName: role.RoleName}, {$set: role}, {upsert: true}, function(err, res) {})
           })
-          getRoles({Marker: data.Marker})
+          if(data.IsTruncated) {
+            getRoles({Marker: data.Marker})
+          }
         }else {
           console.log(colors.green('Done.'))
         }
@@ -134,20 +127,17 @@ const AWSCredentials = (function() {
     getRoles(params)
   }
   var init = function() {
-
-    db.containers.find({}, function(err, data) {
-      // console.log(data)
-    })
     db.profile.findOne({currentProfile: true}, function(err, data) {
-
       if(!_.isEmpty(data)) {
-        console.log(data)
-        console.log('make sure this has a NON expired token')
-        if(data.profileName) {
-          currentProfile = data.profileName
-          refreshRoles()
-        }
+        refreshRoles()
+        currentProfile = data.profileName
+        AWS.config.credentials = new AWS.Credentials(data.AccessKeyId, data.SecretAccessKey, data.SessionToken)
+        let boston = AWS.config.credentials.refreshPromise()
+        boston.then(function() {
 
+        })
+      }else {
+        AWS.config.credentials = new AWS.SharedIniFileCredentials({profile: currentProfile})
 
       }
     })
@@ -170,7 +160,6 @@ const AWSCredentials = (function() {
               db.containers.findOne({ip: container.NetworkSettings.Networks.bridge.IPAddress}, function(err, res) {
                 if(res) {
                   if(Date.parse(res.Expiration) > new Date().getTime()) {
-                    console.log("Expiration is more!")
                     container.AuthStatus = {'authed': true, state: 'active'}
                     resolve(container)
                   }
@@ -203,10 +192,12 @@ const AWSCredentials = (function() {
       getMFADevice()
         .then(function(res) {
           let sn = res.MFADevices[0].SerialNumber
-          console.log(sn + " serial  for device")
           setMFAAuth(sn, mfa).then(function(res) {
-
-            db.profile.update({ profileName: currentProfile }, {$set: res.Credentials}, { upsert: true }, function (err, data) {
+            let extraSec = {
+              SerialNumber: sn,
+              TokenCode: mfa
+            }
+            db.profile.update({ profileName: currentProfile }, {$set: _.assignIn(res.Credentials, extraSec)}, { upsert: true }, function (err, data) {
               if(err) {
                 console.log(colors.red('error updating database for profile'))
                 cb(err)
