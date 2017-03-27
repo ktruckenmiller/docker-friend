@@ -34,7 +34,7 @@ const AWSCredentials = (function() {
   }
   var setMFAAuth = function(serial, token) {
     const params = {
-      DurationSeconds: 129600,
+      DurationSeconds: 43200,
       SerialNumber: serial,
       TokenCode: token
     }
@@ -45,11 +45,16 @@ const AWSCredentials = (function() {
       let profileObj = data[0]
       let new_creds = new AWS.SharedIniFileCredentials({profile: profileObj.profileName})
       AWS.config.credentials = new_creds
-      refreshRoles()
+      if(Date.parse(data.Expiration) > new Date().getTime()) {
+        AWS.config.credentials = sts.credentialsFrom({
+          AccessKeyId: data.AccessKeyId,
+          SecretAccessKey: data.SecretAccessKey,
+          SessionToken: data.SessionToken,
+          Expiration: data.Expiration
+        });
+      }
       if(typeof(cb) === 'function') {
         cb()
-      }else {
-
       }
     })
 
@@ -84,9 +89,13 @@ const AWSCredentials = (function() {
     }).value()[0]
   }
   var refreshCredentials = function(ipAddress, cb) {
-    console.log("Creds expired, refreshing it")
+    console.log(colors.yellow("Creds expired, refreshing them."))
     db.containers.findOne({ip: ipAddress}, function(err, container) {
       if (!err && container.roleArn) {
+        sts.getCallerIdentity(function(err,data) {
+          console.log("get caller identity")
+          console.log(data)
+        })
         sts.assumeRole({
           DurationSeconds: 3600,
           RoleArn: container.roleArn,
@@ -98,6 +107,8 @@ const AWSCredentials = (function() {
               cb(err, res.Credentials)
             })
           }else {
+            console.log(res)
+            console.log(colors.red(err, res))
             cb(err, res)
           }
         })
@@ -107,26 +118,37 @@ const AWSCredentials = (function() {
     })
   }
   var refreshRoles = function() {
-    iam.listRoles().eachPage(function (err, data, done) {
-      if(data) {
-        _.each(data.Roles, function(role) {
+    let params = {}
+    function getRoles(newParams) {
+      iam.listRoles(newParams, function(err, data) {
+        if(!err && data.IsTruncated) {
+          _.each(data.Roles, function(role) {
             db.roles.update({RoleName: role.RoleName}, {$set: role}, {upsert: true}, function(err, res) {})
-            done()
-        })
-      }else {
-        done()
-      }
-    });
+          })
+          getRoles({Marker: data.Marker})
+        }else {
+          console.log(colors.green('Done.'))
+        }
+      })
+    }
+    getRoles(params)
   }
   var init = function() {
 
     db.containers.find({}, function(err, data) {
       // console.log(data)
     })
-    db.profile.find({currentProfile: true}, function(err, data) {
+    db.profile.findOne({currentProfile: true}, function(err, data) {
+
       if(!_.isEmpty(data)) {
-        currentProfile = data[0].profileName
-        refreshRoles()
+        console.log(data)
+        console.log('make sure this has a NON expired token')
+        if(data.profileName) {
+          currentProfile = data.profileName
+          refreshRoles()
+        }
+
+
       }
     })
   }
@@ -181,19 +203,27 @@ const AWSCredentials = (function() {
       getMFADevice()
         .then(function(res) {
           let sn = res.MFADevices[0].SerialNumber
+          console.log(sn + " serial  for device")
           setMFAAuth(sn, mfa).then(function(res) {
+
             db.profile.update({ profileName: currentProfile }, {$set: res.Credentials}, { upsert: true }, function (err, data) {
               if(err) {
+                console.log(colors.red('error updating database for profile'))
                 cb(err)
               }else {
+                console.log(colors.green("refreshing roles..."))
+                refreshRoles()
                 cb(data)
               }
             });
           }).catch(function(err) {
+            console.log(colors.red('error setting MFA Auth'))
             cb(err)
           })
         })
         .catch(function(err) {
+          console.log(colors.red('error getting MFA device'))
+          console.log(err)
           cb(err)
         })
 
@@ -242,7 +272,7 @@ const AWSCredentials = (function() {
           refreshCredentials(ipAddress, function(err, res) {
             cb(null, getCredObject(res))
           })
-        }else if(Date.parse(container.Expiration) > Date.now()) {
+        }else if(Date.parse(container.Expiration) > new Date().getTime()) {
           cb(null, getCredObject(container))
         } else {
 
