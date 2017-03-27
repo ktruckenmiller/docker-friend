@@ -3,7 +3,7 @@ version: '3'
 services:
   docker-friend:
     container_name: docker-friend
-    image: ktruckenmiller/docker-friend
+    image: ktruckenmiller/docker-friend:latest
     privileged: true
     volumes:
       - ~/.aws:/root/.aws:ro
