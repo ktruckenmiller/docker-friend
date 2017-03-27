@@ -4,6 +4,7 @@
 const fs = require('fs')
 const ini = require('ini')
 const _ = require('lodash')
+const colors = require('colors')
 const Docker = require('dockerode')
 const docker = new Docker();
 
@@ -132,6 +133,45 @@ const AWSCredentials = (function() {
 
   init()
   return {
+    filterContainers: function(containers, cb) {
+      // if container is running
+      // set MFA authed or not.
+
+      let all_containers = _.map(JSON.parse(containers), function(val) {
+
+        let container = val
+        container.AuthStatus = {'authed': false, state: 'none'}
+        return new Promise(function(resolve, reject) {
+          try {
+            if(container.State === 'running') {
+
+              db.containers.findOne({ip: container.NetworkSettings.Networks.bridge.IPAddress}, function(err, res) {
+                if(res) {
+                  if(Date.parse(res.Expiration) > new Date().getTime()) {
+                    console.log("Expiration is more!")
+                    container.AuthStatus = {'authed': true, state: 'active'}
+                    resolve(container)
+                  }
+                }
+                resolve(container)
+              })
+            }else {
+              resolve(container)
+            }
+          }catch(err) {
+            resolve(container)
+          }
+
+        })
+      })
+      Promise.all(all_containers).then(values => {
+        let filtered_containers = _.reject(values, function(val) {
+          return val.Names[0] === '/docker-friend' || val.Names[0] === '/docker-friend-nginx'
+        })
+        cb(null, filtered_containers)
+      })
+
+    },
     getProfileNames: function() {
       return _.map(credentials, function(val, key) {
         return key
@@ -183,7 +223,8 @@ const AWSCredentials = (function() {
                 cb(role)
               })
             }else {
-              console.log("You'll have to log in.")
+              console.log(colors.red("Unable to locate a AWS profile to use."))
+              console.log(colors.green("Click on the upper right profile button, and choose which profile you'd like to assume the role of your container with."))
               // send message to the error bus
               cb(err)
             }

@@ -20,7 +20,9 @@ module.exports = [{
       path: '/containers',
       handler: function (err, reply) {
         Got('http://unix:/var/run/docker.sock:/containers/json?all=1').then(containers => {
-          reply(containers.body)
+          awsCreds.filterContainers(containers.body, function(err, res) {
+            reply(res)
+          })
         })
       }
     },{

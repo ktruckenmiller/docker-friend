@@ -17,5 +17,4 @@ iptables \
   --to-destination $LOCAL_IPV4:3000 \
   --wait
 
-# node api/app.js
   bash

@@ -32,7 +32,7 @@ const mutations = {
     state.currentProfile = ''
   },
   updateContainers(state, containers) {
-    state.containers = JSON.parse(containers)
+    state.containers = containers
   },
   updateImages(state, new_images) {
     state.images = JSON.parse(new_images)

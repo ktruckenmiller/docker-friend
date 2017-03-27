@@ -7,7 +7,7 @@
       <p :class="container.ImagePrefix">{{container.Image}}</p>
     </div>
     <div class="controls">
-      <i class="fa fa-key" @click="assumeRole" v-if="container.State === 'running'"  title="Load AWS Credentials"></i>
+      <i class="fa fa-key" :class="[container.AuthStatus.state]" v-if="container.AuthStatus.authed"  title="Load AWS Credentials"></i>
       <i class="fa fa-stop" @click="stopContainer(container)" v-if="container.State === 'running'" title="Stop Container"></i>
       <i class="fa fa-play" @click="startContainer(container)" v-if="container.State !== 'running'" title="Start Container"></i>
       <i class="fa fa-refresh" @click="restartContainer(container)" aria-hidden="true" title="Restart Container"></i>
@@ -75,6 +75,12 @@ export default {
           }
           .fa-ellipsis-h {
             font-size:18px;
+          }
+          .fa-key {
+            color: $red;
+          }
+          .fa-key.active {
+            color:$green;
           }
         }
         &:hover {

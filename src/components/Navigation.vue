@@ -43,7 +43,7 @@
     h2 {
       font-size:16px;
     }
-    
+
     .sections {
       li {
         padding:20px 20px;

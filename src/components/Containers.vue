@@ -22,26 +22,16 @@ export default {
     }
   },
   methods: mapActions(['updateContainers']),
-    // getIndex() {
-    //
-    //
-    //   this.$http.get('http://localhost:8009/profiles').then(response => {
-    //     console.log(response.body);
-    //     // console.log(client)
-    //   }, response => {
-    //     // error callback
-    //     console.log(response)
-    //   });
-    // }
   created() {
     let that = this
     // get endpoint stuff
     this.$http.get('http://localhost:8009/containers').then(res => {
+      // http request has body for some reason
       that.updateContainers(res.body)
     })
     // connect websockets
     client.connect(function(err) {
-      client.subscribe('/containers', that.updateContainers, function(err) {console.log(err)})
+      client.subscribe('/containers', that.updateContainers, function (err) {})
     })
   },
   components: {Container}

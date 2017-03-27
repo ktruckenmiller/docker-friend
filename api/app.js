@@ -1,10 +1,11 @@
 const Hapi = require('hapi');
 const Inert = require('inert');
 const Path = require('path');
-const AWS = require('aws-sdk');
 const Nes = require('nes')
 const Got = require('got')
 const _ = require('lodash')
+const AWS = require('./awsCredentials')
+
 
 const Routes = require('./routes/index')
 
@@ -35,9 +36,13 @@ server.register([Inert, Nes], function (err) {
     server.start((err) => {
       function refreshDocker() {
         Got('http://unix:/var/run/docker.sock:/containers/json?all=1').then(containers => {
-          server.publish('/containers', containers.body)
+          AWS.filterContainers(containers.body, function(err, res) {
+            server.publish('/containers', res)
+          })
+
         })
         Got('http://unix:/var/run/docker.sock:/images/json?all=1').then(images => {
+
           server.publish('/images', images.body)
         })
       }
