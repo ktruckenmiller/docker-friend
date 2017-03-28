@@ -72,8 +72,18 @@ const AWSCredentials = (function() {
     });
   }
   var getCredObject = function(dbObj) {
-    let newObj = _.assignIn({Code: "Success", "Type": "AWS-HMAC", LastUpdated: new Date().toISOString()}, _.pick(dbObj, ['AccessKeyId', 'Expiration', 'SessionToken', 'SecretAccessKey']))
-    return _.chain(newObj).assignIn({Token: newObj.SessionToken}).omit('SessionToken').value()
+    let date = new Date()
+    let newObj = {
+      Code: "Success",
+      "Type": "AWS-HMAC",
+      LastUpdated: date.toISOString().substring(0,19)+'Z',
+      AccessKeyId: dbObj.AccessKeyId,
+      Expiration: dbObj.Expiration.toISOString().substring(0,19)+'Z',
+      // SessionToken: dbObj.SessionToken,
+      SecretAccessKey: dbObj.SecretAccessKey,
+      Token: dbObj.SessionToken
+    }
+    return newObj
   }
   var getContainerRole = function(container) {
     let envVars = container.Config.Env
