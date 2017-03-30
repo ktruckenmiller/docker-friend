@@ -1,30 +1,31 @@
-# docker-friend
+# Docker Friend
+A simple way to visualize docker containers, and to assume AWS credentials
+for specific containers.
 
-> a docker friend
-
-## Build Setup
-
-``` bash
-# install dependencies
-npm install
-
-# serve with hot reload at localhost:8080
-npm run dev
-
-# build for production with minification
-npm run build
-
-# build for production and view the bundle analyzer report
-npm run build --report
-
-# run unit tests
-npm run unit
-
-# run e2e tests
-npm run e2e
-
-# run all tests
-npm test
+Simply run:
+```
+docker-compose up
+```
+and then navigate your browser to:
+```
+http://localhost:8009/
 ```
 
-For detailed explanation on how things work, checkout the [guide](http://vuejs-templates.github.io/webpack/) and [docs for vue-loader](http://vuejs.github.io/vue-loader).
+and proceed to be a friend
+
+![alt tag](https://raw.githubusercontent.com/ktruckenmiller/docker-friend/master/docker-friend.png)
+
+### Assume a base profile
+In order to use docker-friend, you'll need to assume a base profile. You can
+find the base profile in the upper right hand corner of the UI. Once you've
+selected the base profile, your containers can then assume specific roles that
+you attribute to them. 
+
+#### Container-specific roles
+
+To specify the role of a container, simply launch it with the `IAM_ROLE`
+environment variable set to the IAM role you wish the container to run with.
+
+```shell
+docker run -e IAM_ROLE=my-role ubuntu:14.04
+```
