@@ -1,1 +1,3 @@
-redis_data
+node_modules
+tmp
+api/tmp

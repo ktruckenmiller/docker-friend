@@ -1,8 +1,8 @@
 build:
   artifacts:
-    events:
-      dockerhub: ktruckenmiller/docker-events
-      dockerfile: Dockerfile.node
     dockerfriend:
       dockerhub: ktruckenmiller/docker-friend
-      dockerfile: Dockerfile.ruby
+      dockerfile: Dockerfile
+    nginx:
+      dockerhub: ktruckenmiller/docker-friend-nginx
+      dockerfile: Dockerfile.nginx

@@ -1,23 +1,18 @@
-version: '2'
+version: '3'
+
 services:
-  dockerfriend:
+  docker-friend:
     container_name: docker-friend
-    depends_on:
-      - events
-    image: ktruckenmiller/docker-friend
+    image: ktruckenmiller/docker-friend:latest
+    privileged: true
     volumes:
       - ~/.aws:/root/.aws:ro
-    volumes_from:
-      - events
-    ports:
-      - 8010:9292
-    restart: always
-
-  events:
-    container_name: docker-events
-    image: ktruckenmiller/docker-events
-    volumes:
       - /var/run/docker.sock:/var/run/docker.sock
+    network_mode: host
+  frontend:
+    container_name: docker-friend-nginx
+    depends_on:
+      - docker-friend
+    image: ktruckenmiller/docker-friend-nginx
     ports:
-      - 8080:8080
-    restart: always
+      - 127.0.0.1:8009:80

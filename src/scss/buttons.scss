@@ -1,0 +1,43 @@
+.button {
+  margin:0 0 0 20px;
+  padding:0;
+  background-color:$blue;
+  color:white;
+  font-weight:100;
+  border:none;
+  box-shadow:4px 4px 12px rgba(12,12,12,.3);
+  font-size: 16px;
+  min-width: 5rem;
+  text-align:center;
+  cursor:pointer;
+  &:hover {
+    background:$dark_blue;
+    border-color:transparent;
+    text-shadow:none;
+  }
+  // &:active {
+  //   background: $gray;
+  //   border-top:none;
+  // }
+
+  &.cancel {
+    background-color:$red;
+    &:hover {
+      background-color:$dark_red;
+    }
+  }
+  &.inactive {
+    background-color:$gray;
+    box-shadow:none;
+    &:active {
+      cursor:not-allowed;
+    }
+  }
+  &.cancel {
+    background-color: $red;
+  }
+  // &.active {
+  //   border-top:none;
+  //   background-color:$blue;
+  // }
+}
