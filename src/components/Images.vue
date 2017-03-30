@@ -1,13 +1,17 @@
 
 <template>
-  <div class="images">
-    {{$store.state.images}}
+
+  <div id="container_images" class="container_images">
+    <div v-for="containerImage in $store.state.containerImages" class="image_wrap col-lg-3 col-sm-6 col-xs-12">
+      <SingleImage :containerImage="containerImage"></SingleImage>
+    </div>
   </div>
 </template>
 
 <script>
 import Nes from 'nes'
 import { mapActions } from 'vuex'
+import SingleImage from './SingleImage'
 const client = new Nes.Client('ws://localhost:8009');
 
 export default {
@@ -17,6 +21,7 @@ export default {
       msg: ''
     }
   },
+  components: {SingleImage},
   methods: mapActions(['updateImages']),
     // getIndex() {
     //
@@ -62,5 +67,9 @@ li {
 
 a {
   color: #42b983;
+}
+.container_images {
+  display:flex;
+  flex-wrap: wrap;
 }
 </style>
