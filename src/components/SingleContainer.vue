@@ -34,10 +34,6 @@ export default {
   #containers {
     padding: 20px 16px;
     .container_wrap {
-      // overflow:hidden;
-      .container_box {
-
-      }
       .docker_container {
         border:none;
         transition: box-shadow .3s ease-in-out;

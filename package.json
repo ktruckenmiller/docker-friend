@@ -24,6 +24,7 @@
     "nes": "^6.4.0",
     "net": "^1.0.2",
     "node-sass": "^4.5.0",
+    "prettysize": "0.0.3",
     "sass-loader": "^6.0.3",
     "vue": "^2.1.10",
     "vue-resource": "^1.2.0",

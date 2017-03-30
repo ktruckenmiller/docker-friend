@@ -9,7 +9,7 @@ Vue.use(Vuex)
 const state = {
   currentProfile: window.sessionStorage.getItem('_awsProfile'),
   containers: [],
-  images: [],
+  containerImages: [],
   error: "",
   profileNames: [],
   modalState: false,
@@ -35,7 +35,7 @@ const mutations = {
     state.containers = containers
   },
   updateImages(state, new_images) {
-    state.images = JSON.parse(new_images)
+    state.containerImages = JSON.parse(new_images)
   },
   profileNames(state, profileNames) {
     state.profileNames = profileNames
