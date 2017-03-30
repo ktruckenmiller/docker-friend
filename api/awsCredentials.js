@@ -94,39 +94,41 @@ const AWSCredentials = (function() {
     }).value()[0]
   }
   var refreshCredentials = function(ipAddress, cb) {
+    setAWSBase(function() {
+      db.containers.findOne({ip: ipAddress}, function(err, container) {
+        if (!err && container.roleArn) {
+          console.log(colors.yellow("Creds expired for "+container.containerName+", refreshing them."))
 
-    db.containers.findOne({ip: ipAddress}, function(err, container) {
-      if (!err && container.roleArn) {
-        console.log(colors.yellow("Creds expired for "+container.containerName+", refreshing them."))
-        let new_sts = new AWS.STS()
-        new_sts.assumeRole({
-          DurationSeconds: 3600,
-          RoleArn: container.roleArn,
-          RoleSessionName: container.containerName
-        }, function(err, res) {
+          let new_sts = new AWS.STS()
+          new_sts.assumeRole({
+            DurationSeconds: 3600,
+            RoleArn: container.roleArn,
+            RoleSessionName: container.containerName
+          }, function(err, res) {
 
-          if(!err && res.Credentials) {
-            db.containers.update({ip: container.ip}, {$set: res.Credentials}, {upsert: true}, function(errdb, resdb) {
-              cb(err, res.Credentials)
-            })
-          }else {
-            console.log(colors.red(err, res))
-            cb(err, res)
-          }
-        })
-      }
+            if(!err && res.Credentials) {
+              db.containers.update({ip: container.ip}, {$set: res.Credentials}, {upsert: true}, function(errdb, resdb) {
+                cb(err, res.Credentials)
+              })
+            }else {
+              console.log(colors.red(err, res))
+              cb(err, res)
+            }
+          })
+        }
+      })
     })
   }
   var refreshRoles = function() {
     let params = {}
     function getRoles(newParams) {
       iam.listRoles(newParams, function(err, data) {
+        if(!err && !_.isEmpty(data.Roles)) {
 
-        if(!err && data.Roles) {
           _.each(data.Roles, function(role) {
             db.roles.update({RoleName: role.RoleName}, {$set: role}, {upsert: true}, function(err, res) {})
           })
-          if(data.IsTruncated) {
+          if(data.IsTruncated && data.Marker) {
             getRoles({Marker: data.Marker})
           }
         }else {
