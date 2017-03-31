@@ -291,14 +291,10 @@ const AWSCredentials = (function() {
               })
             })
           }else {
-            console.log('Not refreshing')
             cb(null, getCredObject(old_container))
           }
         })
       })
-
-
-
     }
 
   }
