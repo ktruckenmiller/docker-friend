@@ -96,6 +96,7 @@ const AWSCredentials = (function() {
   var refreshCredentials = function(ipAddress, cb) {
 
     db.containers.findOne({ip: ipAddress}, function(err, container) {
+      // get and set the proper role
       if (!err && container.roleArn) {
         console.log(colors.yellow("Creds expired for "+container.containerName+", refreshing them."))
         let new_sts = new AWS.STS()
@@ -118,19 +119,21 @@ const AWSCredentials = (function() {
     })
   }
   var refreshRoles = function() {
+    console.log(colors.green("refreshing roles..."))
     let params = {}
     function getRoles(newParams) {
       iam.listRoles(newParams, function(err, data) {
-
-        if(!err && data.Roles) {
+        if(!err) {
           _.each(data.Roles, function(role) {
             db.roles.update({RoleName: role.RoleName}, {$set: role}, {upsert: true}, function(err, res) {})
           })
-          if(data.IsTruncated) {
+          if(data.IsTruncated && !_.isEmpty(data.Roles)) {
             getRoles({Marker: data.Marker})
+          }else {
+            console.log(colors.green('Done.'))
           }
         }else {
-          console.log(colors.green('Done.'))
+          console.log(colors.red(err))
         }
       })
     }
@@ -148,7 +151,6 @@ const AWSCredentials = (function() {
         })
       }else {
         AWS.config.credentials = new AWS.SharedIniFileCredentials({profile: currentProfile})
-
       }
     })
   }
@@ -212,7 +214,7 @@ const AWSCredentials = (function() {
                 console.log(colors.red('error updating database for profile'))
                 cb(err)
               }else {
-                console.log(colors.green("refreshing roles..."))
+                setAWSBase()
                 refreshRoles()
                 cb(data)
               }
@@ -244,45 +246,61 @@ const AWSCredentials = (function() {
         if (role) {
           // make sure we have this role populated with proper info
           db.roles.findOne({RoleName: role}, function(err, res) {
-
-            if(!err && res) {
-              db.containers.update({ip: ipAddress}, {$set: {
-                roleName: role,
-                roleArn: res.Arn,
-                containerName: container.Name.replace('/', '')
-              }}, {upsert: true}, function(errUpdate, resUpdate) {
-                cb(role)
-              })
-            }else {
+            if(err) {
               console.log(colors.red("Unable to locate a AWS profile to use."))
               console.log(colors.green("Click on the upper right profile button, and choose which profile you'd like to assume the role of your container with."))
               // send message to the error bus
-              cb(err)
             }
+            db.containers.update({ip: ipAddress}, {$set: {
+              containerName: container.Name.replace('/', '')
+            }}, {upsert: true}, function(errUpdate, resUpdate) {
+              cb(role || err)
+            })
           })
         }else {
-          cb(res)
           console.log('No role associated with ' + container.Name)
+          cb(res)
+          // db.containers.update({ip: ipAddress}, {$set: {
+          //   roleName: "",
+          //   roleArn: "",
+          //   containerName: container.Name.replace('/', '')
+          // }}, {upsert: true}, function(err, res) {
+          //   cb(res)
+          // })
         }
       })
 
     },
-    getCreds: function(ipAddress, cb) {
-      db.containers.findOne({ip: ipAddress}, function(err, container) {
-        if(_.isEmpty(container)) {
-          refreshCredentials(ipAddress, function(err, res) {
-            cb(null, getCredObject(res))
-          })
-        }else if(Date.parse(container.Expiration) > new Date().getTime()) {
-          cb(null, getCredObject(container))
-        } else {
+    getCreds: function(ipAddress, newRoleName, cb) {
 
-          refreshCredentials(ipAddress, function(err, res) {
-            cb(null, getCredObject(res))
-          })
-        }
+
+      // find the old container
+      db.containers.findOne({ip: ipAddress}, function(err, old_container) {
+
+        // match the incoming role to an arn
+        db.roles.findOne({RoleName: newRoleName}, function(err, foundRole) {
+          // set up current role no matter what
+          if(_.isEmpty(old_container) || Date.parse(old_container.Expiration) < new Date().getTime() || old_container.roleName !== newRoleName) {
+
+            db.containers.update({ip: ipAddress}, {$set: {
+              roleName: foundRole.RoleName,
+              roleArn: foundRole.Arn
+            }}, {upsert: true}, function(err, res) {
+              refreshCredentials(ipAddress, function(err, res) {
+                cb(null, getCredObject(res))
+              })
+            })
+          }else {
+            console.log('Not refreshing')
+            cb(null, getCredObject(old_container))
+          }
+        })
       })
+
+
+
     }
+
   }
 })()
 

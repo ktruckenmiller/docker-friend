@@ -36,7 +36,7 @@ module.exports = [{
     method: 'GET',
     path: '/latest/meta-data/iam/security-credentials/{role}',
     handler: function(request, reply) {
-      AWS.getCreds(request.info.remoteAddress, function(err, res) {
+      AWS.getCreds(request.info.remoteAddress, request.params.role, function(err, res) {
         reply(res)
       })
     }
