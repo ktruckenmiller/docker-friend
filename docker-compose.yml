@@ -3,7 +3,7 @@ version: '3'
 services:
   docker-friend:
     container_name: docker-friend
-    image: ktruckenmiller/docker-friend:0.2.2
+    image: ktruckenmiller/docker-friend:0.2.3
     privileged: true
     volumes:
       - ./:/code
@@ -14,6 +14,6 @@ services:
     container_name: docker-friend-nginx
     depends_on:
       - docker-friend
-    image: ktruckenmiller/docker-friend-nginx:0.2.2
+    image: ktruckenmiller/docker-friend-nginx:0.2.3
     ports:
       - 127.0.0.1:8009:80
