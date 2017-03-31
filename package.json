@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "aws-sdk": "^2.16.0",
+    "babel-runtime": "^6.23.0",
     "dockerode": "2.3.6",
     "fs": "0.0.1-security",
     "got": "^6.7.1",

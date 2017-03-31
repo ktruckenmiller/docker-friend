@@ -14,7 +14,7 @@
 </template>
 
 <script>
-  import DropMenu from './DropMenu'
+  import DropMenu from './dropmenu'
   export default {
     name: 'navigation',
     props: ['router'],

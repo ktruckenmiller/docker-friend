@@ -7,6 +7,7 @@ WORKDIR /code
 RUN npm install
 
 COPY . /code
+RUN npm run build
 
 
 ENTRYPOINT /code/run-prod.sh
