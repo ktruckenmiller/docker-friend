@@ -142,16 +142,16 @@ const AWSCredentials = (function() {
   var init = function() {
     db.profile.findOne({currentProfile: true}, function(err, data) {
       if(!_.isEmpty(data)) {
-        refreshRoles()
         currentProfile = data.profileName
         AWS.config.credentials = new AWS.Credentials(data.AccessKeyId, data.SecretAccessKey, data.SessionToken)
-        let boston = AWS.config.credentials.refreshPromise()
-        boston.then(function() {
-
-        })
       }else {
         AWS.config.credentials = new AWS.SharedIniFileCredentials({profile: currentProfile})
       }
+      let boston = AWS.config.credentials.refreshPromise()
+      boston.then(function() {
+          refreshRoles()
+      })
+
     })
   }
 
@@ -276,23 +276,27 @@ const AWSCredentials = (function() {
 
       // find the old container
       db.containers.findOne({ip: ipAddress}, function(err, old_container) {
-
         // match the incoming role to an arn
         db.roles.findOne({RoleName: newRoleName}, function(err, foundRole) {
           // set up current role no matter what
-          if(_.isEmpty(old_container) || Date.parse(old_container.Expiration) < new Date().getTime() || old_container.roleName !== newRoleName) {
+          if(foundRole) {
+            if(_.isEmpty(old_container) || Date.parse(old_container.Expiration) < new Date().getTime() || old_container.roleName !== newRoleName) {
 
-            db.containers.update({ip: ipAddress}, {$set: {
-              roleName: foundRole.RoleName,
-              roleArn: foundRole.Arn
-            }}, {upsert: true}, function(err, res) {
-              refreshCredentials(ipAddress, function(err, res) {
-                cb(null, getCredObject(res))
+              db.containers.update({ip: ipAddress}, {$set: {
+                roleName: foundRole.RoleName,
+                roleArn: foundRole.Arn
+              }}, {upsert: true}, function(err, res) {
+                refreshCredentials(ipAddress, function(err, res) {
+                  cb(null, getCredObject(res))
+                })
               })
-            })
+            }else {
+              cb(null, getCredObject(old_container))
+            }
           }else {
-            cb(null, getCredObject(old_container))
+            console.log(colors.red('Could not find role of name '+newRoleName +' in this account.'))
           }
+
         })
       })
     }
