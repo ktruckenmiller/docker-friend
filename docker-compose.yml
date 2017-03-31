@@ -6,7 +6,6 @@ services:
     image: ktruckenmiller/docker-friend:0.2.3
     privileged: true
     volumes:
-      - ./:/code
       - ~/.aws:/root/.aws:ro
       - /var/run/docker.sock:/var/run/docker.sock
     network_mode: host
