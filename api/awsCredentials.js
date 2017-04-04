@@ -279,6 +279,7 @@ const AWSCredentials = (function() {
       // find the old container
       db.containers.findOne({ip: ipAddress}, function(err, old_container) {
         // match the incoming role to an arn
+
         db.roles.findOne({RoleName: newRoleName}, function(err, foundRole) {
           // set up current role no matter what
           if(foundRole) {
@@ -293,6 +294,7 @@ const AWSCredentials = (function() {
                 })
               })
             }else {
+              console.log(old_container)
               cb(null, getCredObject(old_container))
             }
           }else {
