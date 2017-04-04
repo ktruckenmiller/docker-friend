@@ -12,7 +12,7 @@
 import Nes from 'nes'
 import { mapActions } from 'vuex'
 import Container from './SingleContainer'
-const client = new Nes.Client('ws://localhost:8009');
+const client = new Nes.Client('ws://localhost:8010');
 
 export default {
   name: 'index',
@@ -25,7 +25,7 @@ export default {
   created() {
     let that = this
     // get endpoint stuff
-    this.$http.get('http://localhost:8009/containers').then(res => {
+    this.$http.get('http://localhost:8010/containers').then(res => {
       // http request has body for some reason
       that.updateContainers(res.body)
     })

@@ -23,16 +23,16 @@ db.profile = new Datastore({ filename: 'tmp/profile.db', autoload: true });
 
 
 const AWSCredentials = (function() {
-  const config = ini.parse(fs.readFileSync(process.env.HOME + '/.aws/config', 'utf-8'))
   const credentials = ini.parse(fs.readFileSync(process.env.HOME + '/.aws/credentials', 'utf-8'))
   let currentProfile = ""
 
 
-
   var getMFADevice = function() {
+    const iam = new AWS.IAM()
     return iam.listMFADevices().promise()
   }
   var setMFAAuth = function(serial, token) {
+    const sts = new AWS.STS()
     const params = {
       DurationSeconds: 129600,
       SerialNumber: serial,
@@ -79,7 +79,6 @@ const AWSCredentials = (function() {
       LastUpdated: date.toISOString().substring(0,19)+'Z',
       AccessKeyId: dbObj.AccessKeyId,
       Expiration: dbObj.Expiration.toISOString().substring(0,19)+'Z',
-      // SessionToken: dbObj.SessionToken,
       SecretAccessKey: dbObj.SecretAccessKey,
       Token: dbObj.SessionToken
     }
@@ -120,6 +119,7 @@ const AWSCredentials = (function() {
   }
   var refreshRoles = function() {
     console.log(colors.green("refreshing roles..."))
+    const iam = new AWS.IAM()
     let params = {}
     function getRoles(newParams) {
       iam.listRoles(newParams, function(err, data) {
@@ -141,17 +141,18 @@ const AWSCredentials = (function() {
   }
   var init = function() {
     db.profile.findOne({currentProfile: true}, function(err, data) {
+
       if(!_.isEmpty(data)) {
         currentProfile = data.profileName
         AWS.config.credentials = new AWS.Credentials(data.AccessKeyId, data.SecretAccessKey, data.SessionToken)
       }else {
-        AWS.config.credentials = new AWS.SharedIniFileCredentials({profile: currentProfile})
-      }
-      let boston = AWS.config.credentials.refreshPromise()
-      boston.then(function() {
+        AWS.config.credentials = new AWS.SharedIniFileCredentials()
+        if(AWS.config.credentials.accessKeyId) {
           refreshRoles()
-      })
-
+        }else {
+          console.log("Unable to assume default creds. You'll have to do that in the UI.")
+        }
+      }
     })
   }
 
@@ -200,6 +201,14 @@ const AWSCredentials = (function() {
         return key
       })
     },
+    setProfile: function(profileName, cb) {
+      currentProfile = profileName
+      db.profile.update({currentProfile: true}, {$set:{currentProfile: false}}, function(err, data) {
+        db.profile.update({profileName: profileName}, {$set: {profileName: profileName, currentProfile: true}}, { upsert: true },function(err, data) {
+          setAWSBase(cb)
+        })
+      })
+    },
     mfaAuth: function(mfa, cb) {
       getMFADevice()
         .then(function(res) {
@@ -231,14 +240,7 @@ const AWSCredentials = (function() {
         })
 
     },
-    setProfile: function(profileName, cb) {
-      currentProfile = profileName
-      db.profile.update({currentProfile: true}, {$set:{currentProfile: false}}, function(err, data) {
-        db.profile.update({profileName: profileName}, {$set: {profileName: profileName, currentProfile: true}}, { upsert: true },function(err, data) {
-          setAWSBase(cb)
-        })
-      })
-    },
+
     getRoleName: function(ipAddress, cb) {
       // get the role name by IP and return it
       getContainerByIp(ipAddress, function(err, container) {

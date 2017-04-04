@@ -8,7 +8,7 @@ docker-compose up
 ```
 and then navigate your browser to:
 ```
-http://localhost:8009/
+http://localhost:8010/
 ```
 
 and proceed to be a friend
