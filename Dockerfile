@@ -14,6 +14,7 @@ COPY ./config /code/config
 COPY ./src /code/src
 COPY ./index.html /code/index.html
 COPY ./setup.sh /code/setup.sh
+COPY ./run-prod.sh /code/run-prod.sh
 RUN npm run build
 
 # backend stuff
