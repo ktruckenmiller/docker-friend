@@ -9,12 +9,18 @@ module.exports = [{
   }, {
     method: 'POST',
     path: '/aws/submitmfa',
-    handler: function(request, reply) {
-      AWS.setProfile(request.payload.profile, function() {
-        AWS.mfaAuth(request.payload.mfa, function(res) {
-          reply(request.payload)
-        })
+    handler: async (request, reply) => {
+      let profile = await AWS.setProfile(request.payload.profile).catch((err) => {
+        return reply({err: true, msg: err})
+
       })
+      // set profile
+      let authed = await AWS.mfaAuth(request.payload.mfa).catch((err) => {
+        return reply({err: true, msg: err.message})
+
+      })
+      reply(authed)
+
     }
   }, {
     method: 'POST',

@@ -53,16 +53,21 @@ export default {
       // Emit the number value through the input event
     },
     mfaAuth() {
-      console.log()
-
-      // this.$store.dispatch('mfaLogin', this.mfa)
       if(this.mfa.length === 6) {
         this.loading = true
         this.$store.dispatch('submitMFA', this.mfa).then(res => {
+          if(res.body.err) {
+            alert(res.body.msg)
+            this.mfa = ''
+          }else {
+            this.$store.dispatch('hideModal')
+          }
           this.loading = false
-          this.$store.dispatch('hideModal')
+
         }).catch(err => {
-          console.log(err)
+          this.loading = false
+          alert(JSON.stringify(err))
+          this.$store.dispatch('hideModal')
         })
       }
 

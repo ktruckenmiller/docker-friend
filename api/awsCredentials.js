@@ -26,41 +26,113 @@ const AWSCredentials = (function() {
   const credentials = ini.parse(fs.readFileSync(process.env.HOME + '/.aws/credentials', 'utf-8'))
   let currentProfile = ""
 
+  const getCurrentProfile = () => {
+    return new Promise((resolve, reject) => {
+      db.profile.findOne({currentProfile: true}, (err, data) => {
+        if(err) { reject(err) }
+        if(data) {
+          currentProfile = data.profileName
+          AWS.config.credentials = new AWS.Credentials(data.AccessKeyId, data.SecretAccessKey, data.SessionToken)
+        }else {
+          AWS.config.credentials = new AWS.SharedIniFileCredentials()
+          if(AWS.config.credentials.accessKeyId) {
+            refreshRoles(AWS.config.credentials.profile)
+          }else {
+            console.log("Unable to assume default creds.")
+          }
+          resolve(AWS.config.credentials.profile)
+        }
+      })
+    })
+  }
+  const getRoles = (profileName) => {
+    return new Promise((resolve, reject) => {
+      const iam = new AWS.IAM()
+      iam.listRoles({}).eachPage((err, data, done) => {
+        if(err) {
+          reject(err)
+        }
+        if(data) {
+          _.each(data.Roles, function(role) {
+            let newRole = _.assignIn(role, {profile: profileName})
+            console.log(newRole)
+            db.roles.update({RoleName: role.RoleName}, {$set: newRole}, {upsert: true}, function(err, res) {})
+          })
+          done(true)
+        }else {
+          done()
+          resolve()
+        }
+      })
+    })
+  }
+  const getMFADevice = () => {
 
-  var getMFADevice = function() {
-    const iam = new AWS.IAM()
-    return iam.listMFADevices().promise()
-  }
-  var setMFAAuth = function(serial, token) {
-    const sts = new AWS.STS()
-    const params = {
-      DurationSeconds: 129600,
-      SerialNumber: serial,
-      TokenCode: token
-    }
-    return sts.getSessionToken(params).promise()
-  }
-  var setAWSBase = function(cb) {
-    db.profile.findOne({currentProfile: true}, function(err, data) {
-      let profileObj = data
-      if(Date.parse(data.Expiration) > new Date().getTime()) {
-        AWS.config.credentials = new AWS.Credentials(data.AccessKeyId, data.SecretAccessKey, data.SessionToken)
-      }else {
-        AWS.config.credentials = new AWS.SharedIniFileCredentials({profile: profileObj.profileName})
-      }
-      if(typeof(cb) === 'function') {
-        cb()
-      }
+    return new Promise((resolve, reject) => {
+      const iam = new AWS.IAM()
+      iam.listMFADevices(function(err, data) {
+        if(err) {reject()}
+        resolve(data)
+      })
     })
 
   }
-  var getContainerByIp = function(ipAddress, cb) {
+  const setMFAAuth = (serial, token) => {
+    return new Promise((resolve, reject) => {
+      const sts = new AWS.STS()
+      const params = {
+        DurationSeconds: 129600,
+        SerialNumber: serial,
+        TokenCode: token
+      }
+      sts.getSessionToken(params, function(err, res) {
+        console.log(err)
+        if(err) {reject(err); return}
+        console.log(res)
+        let extraSec = {
+          SerialNumber: serial,
+          TokenCode: token
+        }
+        db.profile.update({ profileName: currentProfile }, {$set: _.assignIn(res.Credentials, extraSec)}, { upsert: true }, function (err, data) {
+          if(err) {
+            console.log(colors.red('error updating database for profile'))
+            reject(err)
+          }else {
+
+            refreshRoles(currentProfile)
+            resolve(res)
+          }
+        });
+      })
+
+    })
+
+  }
+  const setAWSBase = () => {
+
+    return new Promise((resolve, reject) => {
+      db.profile.findOne({currentProfile: true}, function(err, data) {
+        let profileObj = data
+        AWS.config.credentials = new AWS.SharedIniFileCredentials({profile: profileObj.profileName})
+        resolve()
+      })
+    })
+  }
+  const getContainerByIp = function(ipAddress, cb) {
     docker.listContainers({all: true}, function(err, containers) {
+
       let matchingContainer = _.filter(containers, function(container) {
         try {
-          return container.State === 'running' && container.NetworkSettings.Networks.bridge.IPAddress === ipAddress
+          if(container.State === 'running') {
+            let network = Object.keys(container.NetworkSettings.Networks)[0]
+            console.log(container.NetworkSettings.Networks[network].IPAddress)
+            console.log(ipAddress)
+            return container.NetworkSettings.Networks[network].IPAddress === ipAddress
+
+          }
         }catch(err) {}
       })
+
       matchingContainer = docker.getContainer(matchingContainer[0].Id)
       matchingContainer.inspect(function(err, res) {
         if(typeof(cb) === 'function' && !err) {
@@ -71,7 +143,7 @@ const AWSCredentials = (function() {
       })
     });
   }
-  var getCredObject = function(dbObj) {
+  const getCredObject = function(dbObj) {
     let date = new Date()
     let newObj = {
       Code: "Success",
@@ -84,7 +156,7 @@ const AWSCredentials = (function() {
     }
     return newObj
   }
-  var getContainerRole = function(container) {
+  const getContainerRole = function(container) {
     let envVars = container.Config.Env
     return _.chain(envVars).filter(function(env) {
       return _.includes(env, 'IAM_ROLE')
@@ -92,7 +164,7 @@ const AWSCredentials = (function() {
       return _.split(env, '=')[1]
     }).value()[0]
   }
-  var refreshCredentials = function(ipAddress, cb) {
+  const refreshCredentials = function(ipAddress, cb) {
 
     db.containers.findOne({ip: ipAddress}, function(err, container) {
       // get and set the proper role
@@ -117,46 +189,22 @@ const AWSCredentials = (function() {
       }
     })
   }
-  var refreshRoles = function() {
-    console.log(colors.green("refreshing roles..."))
-    const iam = new AWS.IAM()
-    let params = {}
-    function getRoles(newParams) {
-      iam.listRoles(newParams, function(err, data) {
-        if(!err) {
-          _.each(data.Roles, function(role) {
-            db.roles.update({RoleName: role.RoleName}, {$set: role}, {upsert: true}, function(err, res) {})
-          })
-          if(data.IsTruncated && !_.isEmpty(data.Roles)) {
-            getRoles({Marker: data.Marker})
-          }else {
-            console.log(colors.green('Done.'))
-          }
-        }else {
-          console.log(colors.red(err))
-        }
-      })
-    }
-    getRoles(params)
-  }
-  var init = function() {
-    db.profile.findOne({currentProfile: true}, function(err, data) {
+  const refreshRoles = async (profileName) => {
+    console.log(colors.green("Refreshing roles..."))
 
-      if(!_.isEmpty(data)) {
-        currentProfile = data.profileName
-        AWS.config.credentials = new AWS.Credentials(data.AccessKeyId, data.SecretAccessKey, data.SessionToken)
-      }else {
-        AWS.config.credentials = new AWS.SharedIniFileCredentials()
-        if(AWS.config.credentials.accessKeyId) {
-          refreshRoles()
-        }else {
-          console.log("Unable to assume default creds. You'll have to do that in the UI.")
-        }
-      }
-    })
+    await getRoles(profileName)
+    console.log(colors.green('Done.'))
+  }
+  const init = async () => {
+    let profile = await getCurrentProfile()
+    console.log('found profile ' + profile)
+
   }
 
-  init()
+  init().then((res)=> {}).catch((err) => {
+    console.log('done with init')
+    // console.log(err)
+  })
   return {
     filterContainers: function(containers, cb) {
       // if container is running
@@ -196,49 +244,35 @@ const AWSCredentials = (function() {
       })
 
     },
-    getProfileNames: function() {
+    getProfileNames: () => {
       return _.map(credentials, function(val, key) {
         return key
       })
     },
-    setProfile: function(profileName, cb) {
-      currentProfile = profileName
-      db.profile.update({currentProfile: true}, {$set:{currentProfile: false}}, function(err, data) {
-        db.profile.update({profileName: profileName}, {$set: {profileName: profileName, currentProfile: true}}, { upsert: true },function(err, data) {
-          setAWSBase(cb)
+    setProfile: async (profileName) => {
+
+      return new Promise((resolve, reject) => {
+        currentProfile = profileName
+
+        db.profile.update({currentProfile: true}, {$set:{currentProfile: false}}, function(err, data) {
+          if(err) {reject(err)}
+          db.profile.update({profileName: profileName}, {$set: {profileName: profileName, currentProfile: true}}, { upsert: true },function(err, data) {
+            if(err && !data) {reject(err)}
+            setAWSBase().then(() => {
+              resolve(profileName)
+            }).catch((err) => {
+              console.log(err)
+              reject("No profile found with the name "+ profileName)
+            })
+
+          })
         })
       })
     },
-    mfaAuth: function(mfa, cb) {
-      getMFADevice()
-        .then(function(res) {
-          let sn = res.MFADevices[0].SerialNumber
-          setMFAAuth(sn, mfa).then(function(res) {
-            let extraSec = {
-              SerialNumber: sn,
-              TokenCode: mfa
-            }
-            db.profile.update({ profileName: currentProfile }, {$set: _.assignIn(res.Credentials, extraSec)}, { upsert: true }, function (err, data) {
-              if(err) {
-                console.log(colors.red('error updating database for profile'))
-                cb(err)
-              }else {
-                setAWSBase()
-                refreshRoles()
-                cb(data)
-              }
-            });
-          }).catch(function(err) {
-            console.log(colors.red('error setting MFA Auth'))
-            cb(err)
-          })
-        })
-        .catch(function(err) {
-          console.log(colors.red('error getting MFA device'))
-          console.log(err)
-          cb(err)
-        })
+    mfaAuth: async (mfa) => {
+      let mfaDevice = await getMFADevice()
 
+      return setMFAAuth(mfaDevice.MFADevices[0].SerialNumber, mfa)
     },
 
     getRoleName: function(ipAddress, cb) {

@@ -1,0 +1,19 @@
+version: '3'
+services:
+  worker:
+    image: nginx:alpine
+    environment:
+      - IAM_ROLE="prod-kloudcover-asg-docke-DockercloudEC2InstanceRo-1XXEYC1C79HIP"
+    networks:
+      - boston
+    entrypoint: /bin/sh
+
+networks:
+  boston:
+    driver: bridge
+    driver_opts:
+      com.docker.network.bridge.name: boston
+    ipam:
+      driver: default
+      config:
+      - subnet: 172.20.0.0/16
