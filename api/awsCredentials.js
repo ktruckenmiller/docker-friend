@@ -38,6 +38,7 @@ const AWSCredentials = (function() {
       SerialNumber: serial,
       TokenCode: token
     }
+    console.log(params)
     return sts.getSessionToken(params).promise()
   }
   var setAWSBase = function(cb) {
@@ -213,6 +214,7 @@ const AWSCredentials = (function() {
       getMFADevice()
         .then(function(res) {
           let sn = res.MFADevices[0].SerialNumber
+          console.log('sn = ' + sn)
           setMFAAuth(sn, mfa).then(function(res) {
             let extraSec = {
               SerialNumber: sn,

@@ -1,0 +1,22 @@
+version: '3'
+
+services:
+  docker-friend:
+    container_name: docker-friend
+    image: ktruckenmiller/docker-friend:0.2.51
+    privileged: true
+    entrypoint: /code/startups/ubuntu.sh
+    volumes:
+      - ./api:/code/api
+      - ./src:/code/src
+      - ./startups:/code/startups
+      - ~/.aws:/root/.aws:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+    network_mode: host
+  frontend:
+    container_name: docker-friend-nginx
+    depends_on:
+      - docker-friend
+    image: ktruckenmiller/docker-friend-nginx
+    ports:
+      - 127.0.0.1:8010:80
