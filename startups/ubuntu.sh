@@ -15,4 +15,5 @@ iptables \
   --table nat \
   --to-destination $LOCAL_IPV4:3000 \
   --wait
-  /bin/sh
+
+  node api/app.js

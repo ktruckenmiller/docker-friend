@@ -2,7 +2,7 @@
 <template>
 
   <div id="container_images" class="container_images">
-    <div v-for="containerImage in $store.state.containerImages" class="image_wrap col-lg-3 col-sm-6 col-xs-12">
+    <div v-for="containerImage in filteredImages" class="image_wrap col-lg-12 col-sm-12 col-xs-12">
       <SingleImage :containerImage="containerImage"></SingleImage>
     </div>
   </div>
@@ -12,7 +12,8 @@
 import Nes from 'nes'
 import { mapActions } from 'vuex'
 import SingleImage from './SingleImage'
-const client = new Nes.Client('ws://localhost:8009');
+import { filter, isArray } from 'lodash'
+const client = new Nes.Client('ws://localhost:8010');
 
 export default {
   name: 'index',
@@ -23,10 +24,29 @@ export default {
   },
   components: {SingleImage},
   methods: mapActions(['updateImages']),
+  computed: {
+    filteredImages: function() {
+      console.log()
+      return _.filter(this.$store.state.containerImages, function(val) {
+        console.log()
+
+        if(_.isArray(val.RepoTags) || val.RepoTags) {
+          if(val.RepoTags[0] !== '<none>:<none>') {
+            return true
+          }else {
+            return false
+          }
+        }else {
+          return true
+        }
+
+      })
+    }
+  },
     // getIndex() {
     //
     //
-    //   this.$http.get('http://localhost:8009/profiles').then(response => {
+    //   this.$http.get('http://localhost:8010/profiles').then(response => {
     //     console.log(response.body);
     //     // console.log(client)
     //   }, response => {
@@ -37,7 +57,7 @@ export default {
   created() {
     let that = this
     // get endpoint stuff
-    this.$http.get('http://localhost:8009/images').then(res => {
+    this.$http.get('http://localhost:8010/images').then(res => {
       console.log(res)
       that.updateImages(res.body)
     })

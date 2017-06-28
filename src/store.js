@@ -106,7 +106,7 @@ const actions = {
     })
   },
   getProfileNames({commit, state}) {
-    return Vue.http.get('http://localhost:8009/aws/profiles').then(res => {
+    return Vue.http.get('http://localhost:8010/aws/profiles').then(res => {
       commit('profileNames', res.body)
     }).catch(err => {
       commit('err', err)
@@ -127,13 +127,20 @@ const actions = {
     commit('modalProfile', {profile: profile})
   },
   submitMFA({commit, state}, mfa) {
-    return Vue.http.post('http://localhost:8009/aws/submitmfa', {"mfa": mfa, "profile": state.modalProfile})
+    return Vue.http.post('http://localhost:8010/aws/submitmfa', {"mfa": mfa, "profile": state.modalProfile})
   },
   assumeRole({commit, state}) {
-    Vue.http.post('http://localhost:8009/aws/assumerole').then(res => {
+    Vue.http.post('http://localhost:8010/aws/assumerole').then(res => {
       console.log(res)
     }).catch(err => {
       console.log(err)
+    })
+  },
+  removeImage({commit, state}, imageId) {
+    docker.removeImage(imageId).catch(err => {
+      console.log(err)
+    }).then(res => {
+      console.log(res)
     })
   }
 

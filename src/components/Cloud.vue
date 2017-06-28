@@ -14,7 +14,7 @@ export default {
   },
   methods: {
     getIndex() {
-      this.$http.get('http://localhost:8009/profiles').then(response => {
+      this.$http.get('http://localhost:8010/profiles').then(response => {
         console.log(response.body);
 
       }, response => {
