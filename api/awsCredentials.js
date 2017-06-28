@@ -9,8 +9,8 @@ const Docker = require('dockerode')
 const docker = new Docker();
 
 const AWS = require('aws-sdk')
-const sts = new AWS.STS()
-const iam = new AWS.IAM()
+let sts = new AWS.STS()
+let iam = new AWS.IAM()
 
 const Datastore = require('nedb')
 
@@ -30,6 +30,7 @@ const AWSCredentials = (function() {
 
 
   var getMFADevice = function() {
+    iam = new AWS.IAM()
     return iam.listMFADevices().promise()
   }
   var setMFAAuth = function(serial, token) {
@@ -38,6 +39,7 @@ const AWSCredentials = (function() {
       SerialNumber: serial,
       TokenCode: token
     }
+    sts = new AWS.STS()
     return sts.getSessionToken(params).promise()
   }
   var setAWSBase = function(cb) {
@@ -221,6 +223,7 @@ const AWSCredentials = (function() {
             });
           }).catch(function(err) {
             console.log(colors.red('error setting MFA Auth'))
+            console.log(colors.yellow(err))
             cb(err)
           })
         })
@@ -233,6 +236,7 @@ const AWSCredentials = (function() {
     },
     setProfile: function(profileName, cb) {
       currentProfile = profileName
+      // set aws profile credentials
       db.profile.update({currentProfile: true}, {$set:{currentProfile: false}}, function(err, data) {
         db.profile.update({profileName: profileName}, {$set: {profileName: profileName, currentProfile: true}}, { upsert: true },function(err, data) {
           setAWSBase(cb)
