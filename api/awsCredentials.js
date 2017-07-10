@@ -16,7 +16,8 @@ import {
   filter,
   chain,
   includes,
-  split
+  split,
+  reject
 } from 'lodash'
 
 const docker = new Docker();
@@ -132,26 +133,25 @@ class AWSCreds {
     }, {
       $set: omit(credentials, ['DurationSeconds'])
     }, { upsert: true })
-    this.setBaseProfile(this._userObj.currentProfile)
+    this.setBaseProfile()
   }
-  async profileMfaExpired (profileName) {
+  profileMfaExpired (profileInQuestion) {
     try {
-      let profileInQuestion = await findOne('profile', {profileName: profileName})
       return Date.parse(profileInQuestion.Expiration) < new Date().getTime()
     } catch (e) {return true}
-
   }
   async setBaseProfile () {
     // if we have a cached MFA session, let's look that up first
-    if (this.profileMfaExpired(this._userObj.currentProfile)) {
+    let profileInQuestion = await findOne('profile', {profileName: this._userObj.currentProfile})
+    if (this.profileMfaExpired(profileInQuestion)) {
       this._userObj.baseCreds = new AWS.SharedIniFileCredentials({profile: this._userObj.currentProfile})
       if (!this.baseProfileSet()) {return {err: true, msg: "This profile doesn't exist."}}
       AWS.config.credentials = this._userObj.baseCreds
     } else {
       this._userObj.baseCreds = new AWS.Credentials(
-          cachedProfile.AccessKeyId,
-          cachedProfile.SecretAccessKey,
-          cachedProfile.SessionToken
+          profileInQuestion.AccessKeyId,
+          profileInQuestion.SecretAccessKey,
+          profileInQuestion.SessionToken
         )
       AWS.config.credentials = this._userObj.baseCreds
     }
@@ -224,35 +224,63 @@ class AWSCreds {
   async assumeContainerRole (roleDetails) {
     // if userObj expired, tell user to refresh MFA
     // else assume container role  and store with role
+    let assumedRole
     try {
-      let assumedRole = await this._sts.assumeRole({
+       assumedRole = await this._sts.assumeRole({
         DurationSeconds: 3600,
         RoleArn: roleDetails.Arn,
         RoleSessionName: 'docker-friend'
       }).promise()
+      let newDetails =
+      await update('roles', {
+        RoleName: roleDetails.RoleName,
+        profile: this._userObj.currentProfile
+      }, {
+        $set: assignIn(roleDetails, {TempCreds: assumedRole.Credentials})
+      }, {
+        upsert: true
+      })
+      return
     }catch (e) {
-      return {err: true, msg: e.message}
+      return {err: true, msg: e}
     }
     // store in database next to the role
-    await update('roles', {RoleName: roleDetails.RoleName, profile: this._userObj.currentProfile}, {$set: assignIn(roleDetails, {TempCreds: assumedRole})}, {upsert: true} )
-    return
+
   }
 
-  async containerRoleRequest (role) {
-    console.log(role)
+  async containerRoleRequest (ipAddress) {
+    let roleFail
+    let role = await this.getContainerRoleNameByIp(ipAddress)
     let roleDetails = await findOne('roles', {RoleName: role, profile: this._userObj.currentProfile})
     // if expired or no creds, refresh
+
     try {
       if (this.credsExpired(roleDetails.TempCreds.Expiration)) {
-        await this.assumeContainerRole(roleDetails)
+        roleFail = await this.assumeContainerRole(roleDetails)
+      } else {
+        return this.getCredObject(roleDetails.TempCreds)
       }
     } catch (e) {
-      await this.assumeContainerRole(roleDetails)
+      roleFail = await this.assumeContainerRole(roleDetails)
     }
     roleDetails = await findOne('roles', {RoleName: role, profile: this._userObj.currentProfile})
-    return this.getCredObject(roleDetails.TempCreds)
 
+    if (roleDetails.TempCreds) {
+      return this.getCredObject(roleDetails.TempCreds)
+    } else {
+      return roleFail
+    }
+  }
+  filterContainers (containers) {
+    let filtered = reject(JSON.parse(containers), (val) => {
+      return val.Names[0] === '/docker-friend' || val.Names[0] === '/docker-friend-nginx'
+    })
 
+    filtered = map(filtered, (val) => {
+      val.AuthStatus = {'authed': false, state: 'none'}
+      return val
+    })
+    return filtered
   }
 }
 export { AWSCreds }
@@ -325,38 +353,6 @@ export { AWSCreds }
     //   })
     //
     // },
-
-    // getCreds: function(ipAddress, newRoleName, cb) {
-    //
-    //
-    //   // find the old container
-    //   db.containers.findOne({ip: ipAddress}, function(err, old_container) {
-    //     // match the incoming role to an arn
-    //
-    //     db.roles.findOne({RoleName: newRoleName}, function(err, foundRole) {
-    //       // set up current role no matter what
-    //       if(foundRole) {
-    //         if(_.isEmpty(old_container) || Date.parse(old_container.Expiration) < new Date().getTime() || old_container.roleName !== newRoleName) {
-    //
-    //           db.containers.update({ip: ipAddress}, {$set: {
-    //             roleName: foundRole.RoleName,
-    //             roleArn: foundRole.Arn
-    //           }}, {upsert: true}, function(err, res) {
-    //             refreshCredentials(ipAddress, function(err, res) {
-    //               cb(null, getCredObject(res))
-    //             })
-    //           })
-    //         }else {
-    //           console.log(old_container)
-    //           cb(null, getCredObject(old_container))
-    //         }
-    //       }else {
-    //         console.log(colors.red('Could not find role of name '+newRoleName +' in this account.'))
-    //       }
-    //
-    //     })
-    //   })
-    // }
 //
 //   }
 // })()

@@ -38,31 +38,34 @@ describe('Docker container call tests', () => {
       RoleName: 'asdf',
       profile: 'default',
       TempCreds: {
-        Expiration: new Date(),
+        Expiration: new Date('2017-12-12'),
         AccessKeyId: 'boston',
         SecretAccessKey: 'asdf',
         Token: 'boston'
       }
+    }
+    //
+    await update('roles', {RoleName: 'asdf'}, {$set: testObj}, {upsert: true})
+    aws.assumeContainerRole = () => {
+      return new Promise((resolve, reject) => {
+        if ( null ) {reject()}
+        resolve()
+      })
+    }
+    assert.ok(await aws.containerRoleRequest('asdf'))
+
+    // refresh creds
+    testObj.TempCreds.Expiration = new Date('2015-03-25')
+    await update('roles', {RoleName: 'asdf'}, {$set: testObj}, {upsert: true})
+    assert.ok(await aws.containerRoleRequest('asdf'))
+
+    // no creds
+    testObj = {
+      RoleName: 'asdf',
+      profile: 'default',
     }
     await update('roles', {RoleName: 'asdf'}, {$set: testObj}, {upsert: true})
     assert.ok(await aws.containerRoleRequest('asdf'))
-  })
-
-  it('container should have to refresh creds', async () => {
-    let testObj = {
-      RoleName: 'asdf',
-      profile: 'default',
-      TempCreds: {
-        Expiration: new Date('2015-03-25'),
-        AccessKeyId: 'boston',
-        SecretAccessKey: 'asdf',
-        Token: 'boston'
-      }
-    }
-  })
-
-  it('container will need new creds', async() => {
-
   })
 
 })

@@ -1,4 +1,4 @@
-FROM node:7.8-alpine
+FROM node:8.1.3-alpine
 RUN apk update && apk add net-tools iptables curl jq
 
 RUN npm install webpack hapi -g

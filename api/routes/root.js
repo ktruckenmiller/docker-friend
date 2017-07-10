@@ -1,5 +1,8 @@
 
-const awsCreds = require('../awsCredentials')
+import { AWSCreds } from '../awsCredentials'
+const awsCreds = new AWSCreds()
+awsCreds.init()
+
 const Got = require('got')
 
 const Docker = require('dockerode')
@@ -20,9 +23,7 @@ module.exports = [{
       path: '/containers',
       handler: function (err, reply) {
         Got('http://unix:/var/run/docker.sock:/containers/json?all=1').then(containers => {
-          awsCreds.filterContainers(containers.body, function(err, res) {
-            reply(res)
-          })
+          reply(awsCreds.filterContainers(containers.body))
         })
       }
     },{

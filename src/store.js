@@ -129,13 +129,13 @@ const actions = {
   submitMFA({commit, state}, mfa) {
     return Vue.http.post('http://localhost:8010/aws/submitmfa', {"mfa": mfa, "profile": state.modalProfile})
   },
-  assumeRole({commit, state}) {
-    Vue.http.post('http://localhost:8010/aws/assumerole').then(res => {
-      console.log(res)
-    }).catch(err => {
-      console.log(err)
-    })
-  },
+  // assumeRole({commit, state}) {
+  //   Vue.http.post('http://localhost:8010/aws/assumerole').then(res => {
+  //     console.log(res)
+  //   }).catch(err => {
+  //     console.log(err)
+  //   })
+  // },
   removeImage({commit, state}, imageId) {
     docker.removeImage(imageId).catch(err => {
       console.log(err)

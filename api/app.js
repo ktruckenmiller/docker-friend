@@ -4,8 +4,10 @@ const Path = require('path');
 const Nes = require('nes')
 const Got = require('got')
 const _ = require('lodash')
-const AWS = require('./awsCredentials')
 
+import { AWSCreds } from './awsCredentials'
+const awsCreds = new AWSCreds()
+awsCreds.init()
 
 const Routes = require('./routes/index')
 
@@ -36,10 +38,9 @@ server.register([Inert, Nes], function (err) {
     server.start((err) => {
       function refreshDocker() {
         Got('http://unix:/var/run/docker.sock:/containers/json?all=1').then(containers => {
-          AWS.filterContainers(containers.body, function(err, res) {
-            server.publish('/containers', res)
-          })
-
+          // awsCreds.filterContainers(containers.body).then(res => {
+          //   server.publish('/containers', res)
+          // }).catch(err)
         })
         Got('http://unix:/var/run/docker.sock:/images/json?all=1').then(images => {
 

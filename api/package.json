@@ -4,7 +4,7 @@
   "description": "",
   "main": "app.js",
   "scripts": {
-    "dev": "nodemon awsCredentials.js --exec babel-node",
+    "dev": "nodemon app.js --exec babel-node",
     "build": "babel lib -d dist",
     "test": "mocha --compilers js:babel-register --require babel-polyfill"
   },
@@ -21,6 +21,7 @@
     "nodemon": "^1.11.0"
   },
   "dependencies": {
-    "aws-sdk": "^2.82.0"
+    "aws-sdk": "^2.82.0",
+    "got": "^7.1.0"
   }
 }
