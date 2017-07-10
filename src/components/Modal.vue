@@ -14,15 +14,25 @@
 </template>
 
 <script>
+
+
 import ModalError from './modals/ModalError'
 import ModalProfile from './modals/ModalProfile'
 import {isEmpty} from 'lodash'
 import { mapActions } from 'vuex'
+const client = new Nes.Client('ws://localhost:8010');
 export default {
   name: 'modal',
   methods: mapActions([
-    'hideModal'
+    'hideModal',
+    'updateEvents'
   ]),
+  created () {
+    let that = this
+    client.connect(function(err) {
+      client.subscribe('/events', that.updateEvents, function (err) {})
+    })
+  },
   components: {ModalError, ModalProfile}
 
 }

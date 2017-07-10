@@ -15,6 +15,7 @@ module.exports = [{
       try {
         profile = await awsCreds.setBaseProfile(request.payload.profile)
         authed = await awsCreds.setMFA(request.payload.mfa)
+        reply()
       } catch (e) {
         reply({err: true, msg: {profile: profile, authed: authed}})
       }

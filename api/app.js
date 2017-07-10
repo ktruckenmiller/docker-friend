@@ -38,9 +38,7 @@ server.register([Inert, Nes], function (err) {
     server.start((err) => {
       function refreshDocker() {
         Got('http://unix:/var/run/docker.sock:/containers/json?all=1').then(containers => {
-          // awsCreds.filterContainers(containers.body).then(res => {
-          //   server.publish('/containers', res)
-          // }).catch(err)
+            server.publish('/containers', awsCreds.filterContainers(containers.body))
         })
         Got('http://unix:/var/run/docker.sock:/images/json?all=1').then(images => {
 

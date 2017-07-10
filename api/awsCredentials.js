@@ -5,6 +5,9 @@ import ini from 'ini'
 import colors from 'colors'
 import Docker from 'dockerode'
 import AWS from 'aws-sdk'
+import server from './app'
+
+
 import { findOne, update } from './database'
 import {
   isString,
@@ -140,7 +143,8 @@ class AWSCreds {
       return Date.parse(profileInQuestion.Expiration) < new Date().getTime()
     } catch (e) {return true}
   }
-  async setBaseProfile () {
+  async setBaseProfile (profile = false) {
+    this._userObj.currentProfile = profile || this._userObj.currentProfile
     // if we have a cached MFA session, let's look that up first
     let profileInQuestion = await findOne('profile', {profileName: this._userObj.currentProfile})
     if (this.profileMfaExpired(profileInQuestion)) {
@@ -253,7 +257,6 @@ class AWSCreds {
     let role = await this.getContainerRoleNameByIp(ipAddress)
     let roleDetails = await findOne('roles', {RoleName: role, profile: this._userObj.currentProfile})
     // if expired or no creds, refresh
-
     try {
       if (this.credsExpired(roleDetails.TempCreds.Expiration)) {
         roleFail = await this.assumeContainerRole(roleDetails)
@@ -284,77 +287,3 @@ class AWSCreds {
   }
 }
 export { AWSCreds }
-
-// const AWSCredentials = (function() {
-
-  // const refreshCredentials = function(ipAddress, cb) {
-  //
-  //   db.containers.findOne({ip: ipAddress}, function(err, container) {
-  //     // get and set the proper role
-  //     if (!err && container.roleArn) {
-  //       console.log(colors.yellow("Creds expired for "+container.containerName+", refreshing them."))
-  //       sts = new AWS.STS()
-  //       sts.assumeRole({
-  //         DurationSeconds: 3600,
-  //         RoleArn: container.roleArn,
-  //         RoleSessionName: container.containerName
-  //       }, function(err, res) {
-  //
-  //         if(!err && res.Credentials) {
-  //           db.containers.update({ip: container.ip}, {$set: res.Credentials}, {upsert: true}, function(errdb, resdb) {
-  //             cb(err, res.Credentials)
-  //           })
-  //         }else {
-  //           console.log(colors.red(err, res))
-  //           cb(err, res)
-  //         }
-  //       })
-  //     }
-  //   })
-  // }
-  // return {
-    // async filterContainers (containers, cb) {
-    //   // if container is running
-    //   // set MFA authed or not.
-    //   let filtered_containers = JSON.parse(containers)
-    //   let all_containers = _.map(filtered_containers, function(val) {
-    //
-    //     let container = val
-    //     container.AuthStatus = {'authed': false, state: 'none'}
-    //     // instead of doing a promise here, maybe push this into a separate function
-    //     // in our db calls to figure this out and return it
-    //     return new Promise(function(resolve, reject) {
-    //       try {
-    //         if(container.State === 'running') {
-    //
-    //           db.containers.findOne({ip: container.NetworkSettings.Networks.bridge.IPAddress}, function(err, res) {
-    //             if(res) {
-    //               if(Date.parse(res.Expiration) > new Date().getTime()) {
-    //                 container.AuthStatus = {'authed': true, state: 'active'}
-    //                 resolve(container)
-    //               }
-    //             }
-    //             resolve(container)
-    //           })
-    //         }else {
-    //           resolve(container)
-    //         }
-    //       }catch(err) {
-    //         resolve(container)
-    //       }
-    //
-    //     })
-    //   })
-    //   Promise.all(all_containers).then(values => {
-    //     let filtered_containers = _.reject(values, function(val) {
-    //       return val.Names[0] === '/docker-friend' || val.Names[0] === '/docker-friend-nginx'
-    //     })
-    //     cb(null, filtered_containers)
-    //   })
-    //
-    // },
-//
-//   }
-// })()
-//
-// module.exports = AWSCredentials

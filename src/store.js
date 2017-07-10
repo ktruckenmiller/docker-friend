@@ -113,6 +113,9 @@ const actions = {
 
     })
   },
+  updateEvents({commit, state}, newEvent) {
+    console.log(newEvent)
+  },
   hideModal({commit, state}) {
     commit('modalSet', false)
     commit('modalProfile', false)
