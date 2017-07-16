@@ -20,17 +20,9 @@ module.exports = [{
         reply({err: true, msg: {profile: profile, authed: authed}})
       }
     }
-  // }, {
-  //   method: 'POST',
-  //   path: '/aws/assumerole',
-  //   handler: function(request, reply) {
-  //     AWSCreds.authContainer().then(function(res) {
-  //       reply(res)
-  //     }).catch(function(err) {reply(err)})
-  //   }
   }, {
     method: 'GET',
-    path: '/latest/meta-data/iam/security-credentials/',
+    path: '/latest/meta-data/iam/security-credentials',
     handler: (request, reply) => {
       awsCreds.getContainerRoleNameByIp(request.info.remoteAddress).then(res => {
         reply(res)

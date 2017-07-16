@@ -18,6 +18,9 @@ const server = new Hapi.Server({
             files: {
                 relativeTo: Path.join(__dirname, '../dist')
             }
+        },
+        router: {
+          stripTrailingSlash: true
         }
     }
 });
@@ -28,7 +31,7 @@ server.connection({
 
 
 
-server.register([Inert, Nes], function (err) {
+server.register([Inert, Nes, require('./awsRoles')], function (err) {
     if (err) {
         throw err;
     }
@@ -58,7 +61,8 @@ server.ext({
     type: 'onRequest',
     method: function (request, reply) {
         // check and make sure this is a local request?
-        // console.log(request.raw.req.headers)
+        // console.log(request.route)
+        // console.log(request.path)
         reply.continue();
     }
 });
