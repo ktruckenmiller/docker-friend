@@ -9,6 +9,7 @@ services:
       - ~/.aws:/root/.aws:ro
       - /var/run/docker.sock:/var/run/docker.sock
     network_mode: host
+    
   frontend:
     container_name: docker-friend-nginx
     depends_on:

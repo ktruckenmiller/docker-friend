@@ -15,7 +15,7 @@
 
 <script>
 
-
+import Nes from 'nes'
 import ModalError from './modals/ModalError'
 import ModalProfile from './modals/ModalProfile'
 import {isEmpty} from 'lodash'

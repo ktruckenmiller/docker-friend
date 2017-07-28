@@ -1,6 +1,7 @@
 import Vue from 'vue'
 import Vuex from 'vuex'
 import docker from 'functions/docker'
+import { map, find, assignIn, clone } from 'lodash'
 
 Vue.use(Vuex)
 
@@ -9,6 +10,7 @@ Vue.use(Vuex)
 const state = {
   currentProfile: window.sessionStorage.getItem('_awsProfile'),
   containers: [],
+  containerState: [],
   containerImages: [],
   error: "",
   profileNames: [],
@@ -32,7 +34,25 @@ const mutations = {
     state.currentProfile = ''
   },
   updateContainers(state, containers) {
-    state.containers = containers
+    state.containers = map(containers, (newContainer) => {
+      let oldContainer = find(state.containers, (val) => {
+        if (val.Id === newContainer.Id) {return val}
+      })
+      if(oldContainer) {
+        return assignIn(oldContainer, newContainer)
+      }else {
+        return newContainer
+      }
+    })
+  },
+  updateContainerSingle(state, container) {
+    state.containers = map(state.containers, (oldContainer) => {
+      if(container.Id === oldContainer.Id) {
+        return assignIn(oldContainer, container)
+      } else {
+        return oldContainer
+      }
+    })
   },
   updateImages(state, new_images) {
     state.containerImages = JSON.parse(new_images)
@@ -51,21 +71,6 @@ const mutations = {
 // actions are functions that causes side effects and can involve
 // asynchronous operations.
 const actions = {
-  increment: ({ commit }) => commit('increment'),
-  decrement: ({ commit }) => commit('decrement'),
-  incrementIfOdd ({ commit, state }) {
-    if ((state.count + 1) % 2 === 0) {
-      commit('increment')
-    }1
-  },
-  incrementAsync ({ commit }) {
-    return new Promise((resolve, reject) => {
-      setTimeout(() => {
-        commit('increment')
-        resolve()
-      }, 1000)
-    })
-  },
   logout({commit}) {
     // maybe do some api call to reset roles?
     commit('logOut')
@@ -90,20 +95,32 @@ const actions = {
       commit('error', 'We couldnt get a response back')
     })
   },
-  startContainer( {commit, state}, container) {
-    docker.startContainer(container).catch((err) => {
+  async startContainer( {commit, state}, container) {
+    let cont = clone(container)
+    commit('updateContainerSingle', assignIn(cont, {Transition: 'starting'}))
+    try {
+      docker.startContainer(container)
+    } catch(err) {
       commit('error', err)
-    })
+    }
+
+    commit('updateContainerSingle', assignIn(cont, {Transition: ''}))
   },
-  stopContainer( {commit, state}, container) {
-    docker.stopContainer(container).catch((err) => {
-      commit('error', err)
-    })
+  async stopContainer( {commit, state}, container) {
+    let cont = clone(container)
+    commit('updateContainerSingle', assignIn(cont, {Transition: 'stopping'}))
+    try {
+      let res = await docker.stopContainer(container)
+    }catch(err) {commit('error', err)}
+    commit('updateContainerSingle', assignIn(cont, {Transition: ''}))
   },
-  restartContainer( {commit, state}, container) {
-    docker.restartContainer(container).catch((err) => {
-      commit('error', err)
-    })
+  async restartContainer( {commit, state}, container) {
+    let cont = clone(container)
+    commit('updateContainerSingle', assignIn(cont, {Transition: 'restarting'}))
+    try {
+      await docker.restartContainer(container)
+    }catch(err) {commit('error', err)}
+    commit('updateContainerSingle', assignIn(cont, {Transition: ''}))
   },
   getProfileNames({commit, state}) {
     return Vue.http.get('http://localhost:8010/aws/profiles').then(res => {

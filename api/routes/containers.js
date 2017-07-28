@@ -47,6 +47,7 @@ module.exports = [{
   handler: function(request, reply) {
     const container = docker.getContainer(request.payload.container.replace('/', ''))
     container.stop(function(err, res) {
+      console.log(err,res)
       if(err) {
         reply(err)
       }else {

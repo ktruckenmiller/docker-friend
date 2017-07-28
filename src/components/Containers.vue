@@ -12,7 +12,7 @@
 import Nes from 'nes'
 import { mapActions } from 'vuex'
 import Container from './SingleContainer'
-const client = new Nes.Client('ws://localhost:8010');
+const client = new Nes.Client('ws://localhost:3000');
 
 export default {
   name: 'index',
@@ -32,6 +32,11 @@ export default {
     // connect websockets
     client.connect(function(err) {
       client.subscribe('/containers', that.updateContainers, function (err) {})
+      client.subscribe('/aws', (res) => {
+        console.log(res)
+      }, (err) => {
+        console.log(err)
+      })
     })
   },
   components: {Container}

@@ -14,6 +14,8 @@ COPY index.html setup.sh /code/
 RUN npm run build
 
 # backend stuff
+# WORKDIR ./api
+# RUN npm run build
 COPY ./api /code/api
 
 

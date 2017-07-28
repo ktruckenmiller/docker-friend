@@ -1,9 +1,13 @@
+require("babel-core/register");
+require("babel-polyfill");
 const Hapi = require('hapi');
 const Inert = require('inert');
 const Path = require('path');
 const Nes = require('nes')
 const Got = require('got')
+import AWSRoles from './awsRoles'
 const _ = require('lodash')
+
 
 import { AWSCreds } from './awsCredentials'
 const awsCreds = new AWSCreds()
@@ -31,7 +35,7 @@ server.connection({
 
 
 
-server.register([Inert, Nes, require('./awsRoles')], function (err) {
+server.register([Inert, Nes, AWSRoles], function (err) {
     if (err) {
         throw err;
     }

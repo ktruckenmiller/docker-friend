@@ -1,4 +1,15 @@
 {
   "presets": ["es2015", "stage-2"],
-  "plugins": []
+  "plugins": [
+    ["transform-runtime", {
+      "polyfill": false,
+      "regenerator": true
+    }]
+  ],
+  "ignore": [
+    "test/*",
+    "node_modules/*",
+    "dist",
+    ".npm"
+  ]
 }

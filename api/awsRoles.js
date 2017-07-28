@@ -1,10 +1,19 @@
 'use strict';
 
-exports.register = function (server, options, next) {
-    
-    next();
+
+const register = (server, options, next) => {
+  console.log('loaded aws roles')
+  server.subscription('/aws')
+  setInterval(() => {
+    server.publish('/aws', "boston")
+  } , 3000)
+  next();
+}
+
+
+register.attributes = {
+  name: 'myPlugin',
+  version: '1.0.0'
 };
 
-exports.register.attributes = {
-    pkg: require('./package.json')
-};
+export default register
