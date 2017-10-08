@@ -1,19 +1,20 @@
 'use strict';
 
+let Server
 
-const register = (server, options, next) => {
-  console.log('loaded aws roles')
-  server.subscription('/aws')
-  setInterval(() => {
-    server.publish('/aws', "boston")
-  } , 3000)
+module.exports.update = (payload) => {
+  Server.publish('/aws', payload)
+}
+
+
+module.exports.register = (server, options, next) => {
+  Server = server
+  Server.subscription('/aws')
   next();
 }
 
 
-register.attributes = {
+module.exports.register.attributes = {
   name: 'myPlugin',
   version: '1.0.0'
 };
-
-export default register

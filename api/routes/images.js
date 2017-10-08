@@ -5,10 +5,17 @@ module.exports = [{
   method: 'POST',
   path: '/image/remove',
   handler: function(request, reply) {
-    const image = docker.getImage(request.payload.image)
-    image.remove(image.name)
-    // docker.removeImage(image.name)
-    reply(image)
+    console.log('image remove!')
+    try {
+      const image = docker.getImage(request.payload.image)
+      image.remove(image.name)
+      // docker.removeImage(image.name)
+      reply(image)
+    } catch (e) {
+      console.log(e)
+      reply(e)
+    }
+
 
     // container.remove(function(err, res) {
     //   if(err) {

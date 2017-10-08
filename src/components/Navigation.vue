@@ -15,6 +15,10 @@
 
 <script>
   import DropMenu from './dropmenu'
+  import Nes from 'nes'
+  import { mapActions } from 'vuex'
+  const client = new Nes.Client(`ws://${process.env.API_HOST}`);
+
   export default {
     name: 'navigation',
     props: ['router'],
@@ -24,6 +28,15 @@
     //     console.log();
     //   }
     // },
+    created() {
+      client.connect(() => {
+        client.subscribe('/aws', (res) => {
+          this.$store.dispatch('changeProfileSelection', res)
+        }, (err) => {
+          console.log(err)
+        })
+      })
+    },
     components: {DropMenu}
   }
 </script>

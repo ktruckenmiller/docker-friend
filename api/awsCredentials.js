@@ -19,6 +19,7 @@ import {
   filter,
   chain,
   includes,
+  last,
   split,
   reject
 } from 'lodash'
@@ -96,7 +97,7 @@ class AWSCreds {
   getMFADevice () {
     if (!this.baseProfileSet()) {return}
     return new Promise((resolve, reject) => {
-      AWS.config.credentials = this._userObj.baseCreds
+      AWS.config.credentials = new AWS.SharedIniFileCredentials({profile: this._userObj.currentProfile})
       this._iam = new AWS.IAM()
       this._iam.listMFADevices({}, (err, data) => {
         if(err) {reject(err)}
@@ -108,19 +109,18 @@ class AWSCreds {
 
   async getSessionToken (token = false) {
     let hasMFADevice = await this.getMFADevice()
-    if (!hasMFADevice || !token) {return {err: true}}
+    console.log(hasMFADevice)
+    console.log(AWS.config.credentials)
     this._sts = new AWS.STS()
     const params = {
       DurationSeconds: 129600,
       SerialNumber: hasMFADevice,
       TokenCode: String(token)
     }
-    try {
-      let res = await this._sts.getSessionToken(params).promise()
-      return assignIn(res.Credentials, params)
-    } catch (e) {
-      return {err: true}
-    }
+    let res = await this._sts.getSessionToken(params).promise()
+    console.log(res)
+    return assignIn(res.Credentials, params)
+
   }
 
 
@@ -129,7 +129,7 @@ class AWSCreds {
   async setMFA (token) {
 
     let credentials = await this.getSessionToken(token)
-    if (credentials.err) {return "Cant set creds"}
+    if (credentials.err) {throw new Error('Could not set credentials.')}
 
     await update('profile', {
       profileName: this._userObj.currentProfile
@@ -149,7 +149,7 @@ class AWSCreds {
     let profileInQuestion = await findOne('profile', {profileName: this._userObj.currentProfile})
     if (this.profileMfaExpired(profileInQuestion)) {
       this._userObj.baseCreds = new AWS.SharedIniFileCredentials({profile: this._userObj.currentProfile})
-      if (!this.baseProfileSet()) {return {err: true, msg: "This profile doesn't exist."}}
+      if (!this.baseProfileSet()) { throw new Error("This profile doesn't exist.")}
       AWS.config.credentials = this._userObj.baseCreds
     } else {
       this._userObj.baseCreds = new AWS.Credentials(
@@ -206,18 +206,35 @@ class AWSCreds {
 
   async getContainerRoleNameByIp (ipAddress) {
     let container = await this.getContainerByIp(ipAddress)
-    let role = await this.getContainerRole(container)
-    if (!role) { return {err: true, msg: "No role associated with this container. Set it by using `-e IAM_ROLE=my-role` on the container run."}}
-    return role
+    let roleName = await this.getContainerRoleName(container)
+
+    if (!roleName) { return {err: true, msg: "No role associated with this container. Set it by using `-e IAM_ROLE=my-role` or `-e IAM_ROLE_ARN=arn:aws:iam::<account>:role/your-role` on the container run."}}
+    return roleName
+  }
+  async getContainerRoleArnByIp (ipAddress) {
+    let container = await this.getContainerByIp(ipAddress)
+    return await this.getContainerRoleArn(container)
   }
 
-  getContainerRole (container) {
+  getContainerRoleArn (container) {
+    let envVars = container.Config.Env
+    let roleArn = chain(envVars)
+      .filter((env) => {
+        return includes(env, 'IAM_ROLE_ARN')
+      }).value()
+    if (roleArn.length > 0) {
+      return split(roleArn[0], '=')[1]
+    }
+  }
+
+  getContainerRoleName (container) {
     let envVars = container.Config.Env
     return chain(envVars)
     .filter((env) => {
-      return includes(env, 'IAM_ROLE')
+      return includes(env, 'IAM_ROLE', 'IAM_ROLE_ARN')
     }).map((env) => {
-      return split(env, '=')[1]
+      let r = split(env, '=')[1]
+      return last(split(r, '/'))
     }).value()[0]
   }
 
@@ -228,6 +245,7 @@ class AWSCreds {
   async assumeContainerRole (roleDetails) {
     // if userObj expired, tell user to refresh MFA
     // else assume container role  and store with role
+    console.log('Assuming role...')
     let assumedRole
     try {
        assumedRole = await this._sts.assumeRole({
@@ -253,9 +271,21 @@ class AWSCreds {
   }
 
   async containerRoleRequest (ipAddress) {
-    let roleFail
+    let roleFail, roleDetails
     let role = await this.getContainerRoleNameByIp(ipAddress)
-    let roleDetails = await findOne('roles', {RoleName: role, profile: this._userObj.currentProfile})
+    let roleArn = await this.getContainerRoleArnByIp(ipAddress)
+
+    if (roleArn) {
+      // find if already assumed
+      roleDetails = await findOne('roles', {Arn: roleArn, profile: this._userObj.currentProfile})
+      if (!roleDetails) {
+        let roleDetails = await update('roles', {Arn: roleArn, profile: this._userObj.currentProfile})
+      }
+      // if not, lets assume it
+    } else {
+      roleDetails = await findOne('roles', {RoleName: role, profile: this._userObj.currentProfile})
+    }
+
     // if expired or no creds, refresh
     try {
       if (this.credsExpired(roleDetails.TempCreds.Expiration)) {
@@ -267,6 +297,7 @@ class AWSCreds {
       roleFail = await this.assumeContainerRole(roleDetails)
     }
     roleDetails = await findOne('roles', {RoleName: role, profile: this._userObj.currentProfile})
+
 
     if (roleDetails.TempCreds) {
       return this.getCredObject(roleDetails.TempCreds)

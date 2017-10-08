@@ -8,6 +8,7 @@ docker run -it \
   --rm \
   --name="docker-friend-nginx" \
   nginx
+npm run dev & \
 docker run -it \
   --rm \
   -v $(PWD):/code \

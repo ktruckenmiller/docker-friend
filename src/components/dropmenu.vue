@@ -2,9 +2,9 @@
   <div id="menu"class="row">
     <ul class="menu">
       <li class="menu__item menu__item--dropdown" v-on:click="toggle('ranking')" v-bind:class="{'open' : dropDowns.ranking.open}">
-          <a class="menu__link menu__link--toggle">
+          <a title="Select AWS Profile" class="menu__link menu__link--toggle">
             <i class="fa fa-user-circle" aria-hidden="true"></i>{{ $store.state.currentProfile }}
-            <i class='fa fa-caret-down' @click="changeProfileSelection">{{ $store.state.currentProfile }}</i>
+            <i class='fa fa-caret-down'></i>
           </a>
           <ul class="dropdown-menu">
               <!-- <li class="dropdown-menu__item aws">AWS</li> -->
@@ -33,6 +33,7 @@
           self.close()
         }
       }, false)
+      // this.$store.dispatch('getCurrentProfile')
       this.$store.dispatch('getProfileNames')
     },
     data() {
@@ -60,7 +61,7 @@
         this.$store.dispatch('openLogin', profile)
       },
       changeProfileSelection() {
-
+        console.log(' change profile selection !')
       }
     }
   }

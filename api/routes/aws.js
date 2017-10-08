@@ -1,7 +1,14 @@
 import { AWSCreds } from '../awsCredentials'
+import { update } from '../awsRoles'
 const awsCreds = new AWSCreds()
 awsCreds.init()
 module.exports = [{
+    method: 'GET',
+    path: '/aws/currentProfile',
+    handler: function(request, reply) {
+      reply()
+    }
+  },{
     method: 'GET',
     path: '/aws/profiles',
     handler: function(request, reply) {
@@ -13,12 +20,21 @@ module.exports = [{
     handler: async (request, reply) => {
       let profile, authed
       try {
+        console.log('trying to set base profile')
         profile = await awsCreds.setBaseProfile(request.payload.profile)
-        authed = await awsCreds.setMFA(request.payload.mfa)
-        reply()
       } catch (e) {
-        reply({err: true, msg: {profile: profile, authed: authed}})
+        return reply({err: true, msg: {profile: profile, authed: authed}})
       }
+      try {
+        console.log('trying to set mfa')
+        authed = await awsCreds.setMFA(request.payload.mfa)
+        console.log('settting mfa', authed)
+        update(request.payload.profile)
+      } catch (e) {
+        return reply({err: true, msg: e})
+      }
+      return reply()
+
     }
   }, {
     method: 'GET',

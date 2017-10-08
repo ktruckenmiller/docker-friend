@@ -56,6 +56,7 @@ export default {
       if(this.mfa.length === 6) {
         this.loading = true
         this.$store.dispatch('submitMFA', this.mfa).then(res => {
+          console.log(res)
           if(res.body.err) {
             alert(res.body.msg)
             this.mfa = ''

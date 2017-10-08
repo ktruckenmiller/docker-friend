@@ -37,7 +37,7 @@ export default {
         position:relative;
         padding:8px 15px 8px 20px;
         color:$dark_gray;
-        box-shadow: 0 2px 4px 0 rgba(0, 0, 0, 0.2), 0 25px 50px 0 rgba(0, 0, 0, 0.1);
+        box-shadow: 0 2px 2px 0 rgba(0, 0, 0, 0.1);
         background-color:white;
         text-align:left;
         display:flex;
@@ -84,7 +84,7 @@ export default {
           }
         }
         &.killing {
-          box-shadow:0 25px 50px 0 rgba(0, 0, 0, 0.1);
+          box-shadow: 0 3px 6px 0 rgba(0, 0, 0, 0.05);
           display:none;
           .fa-refresh {
             animation-name: spin;
@@ -94,6 +94,7 @@ export default {
           }
         }
         &.stopping {
+          box-shadow:0 0 0 rgba(0,0,0,1);
           .names {opacity:.4;}
           .controls {opacity: 0;}
         }
@@ -124,7 +125,8 @@ export default {
           &.exited {background-color:$dark_gray;}
           &.created {background-color:$yellow;}
           &.stopping {
-            animation: redGray 1s infinite alternate;
+            box-shadow: none;
+            animation: redGray 1s infinite ease-in-out;
           }
         }
         @keyframes redGray {

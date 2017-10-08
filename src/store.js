@@ -8,7 +8,7 @@ Vue.use(Vuex)
 // root state object.
 // each Vuex instance is just a single state tree.
 const state = {
-  currentProfile: window.sessionStorage.getItem('_awsProfile'),
+  currentProfile: window.sessionStorage.getItem('_awsProfile') || 'default',
   containers: [],
   containerState: [],
   containerImages: [],
@@ -28,6 +28,9 @@ const mutations = {
     state.error = err
   },
   changeProfile (state, profile_name) {
+    state.currentProfile = profile_name
+  },
+  updateProfileName (stage, profile_name) {
     state.currentProfile = profile_name
   },
   logOut(state) {
@@ -75,9 +78,14 @@ const actions = {
     // maybe do some api call to reset roles?
     commit('logOut')
   },
-  changeProfileSelection({ commit, state}, e) {
+  changeProfileSelection({ commit, state}, profileName) {
     // api call to set credentials
-    commit('changeProfile', {profile: e.target.value})
+    window.sessionStorage.setItem('_awsProfile', profileName)
+    console.log(' change profile selection')
+    commit('changeProfile', profileName)
+  },
+  updateProfileName({ commit, state}, profileName) {
+    commit('updateProfileName', profileName)
   },
   updateContainers({commit, state}, newObj) {
     commit('updateContainers', newObj)
@@ -122,12 +130,18 @@ const actions = {
     }catch(err) {commit('error', err)}
     commit('updateContainerSingle', assignIn(cont, {Transition: ''}))
   },
+  getCurrentProfile({commit, state}) {
+    return Vue.http.get(`http://${process.env.API_HOST}/aws/currentProfile`).then(res => {
+      commit('updateProfileName', res)
+    }).catch(err => {
+      commit('err', err)
+    })
+  },
   getProfileNames({commit, state}) {
-    return Vue.http.get('http://localhost:8010/aws/profiles').then(res => {
+    return Vue.http.get(`http://${process.env.API_HOST}/aws/profiles`).then(res => {
       commit('profileNames', res.body)
     }).catch(err => {
       commit('err', err)
-
     })
   },
   updateEvents({commit, state}, newEvent) {
