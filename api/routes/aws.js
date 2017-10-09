@@ -5,8 +5,17 @@ awsCreds.init()
 module.exports = [{
     method: 'GET',
     path: '/aws/currentProfile',
-    handler: function(request, reply) {
-      reply()
+    handler: async (request, reply) => {
+      let profile = await awsCreds.getProfile()
+      console.log(profile)
+      console.log('profile^^')
+      reply(profile)
+    }
+  },{
+    method: 'POST',
+    path: '/aws/setProfile',
+    handler: (request, reply) => {
+
     }
   },{
     method: 'GET',
@@ -14,7 +23,7 @@ module.exports = [{
     handler: function(request, reply) {
       reply(awsCreds.getProfileNames())
     }
-  }, {
+  },{
     method: 'POST',
     path: '/aws/submitmfa',
     handler: async (request, reply) => {
@@ -26,13 +35,13 @@ module.exports = [{
         return reply({err: true, msg: {profile: profile, authed: authed}})
       }
       try {
-        console.log('trying to set mfa')
         authed = await awsCreds.setMFA(request.payload.mfa)
-        console.log('settting mfa', authed)
         update(request.payload.profile)
       } catch (e) {
+
         return reply({err: true, msg: e})
       }
+      console.log(profile, authed)
       return reply()
 
     }
@@ -49,11 +58,18 @@ module.exports = [{
   }, {
     method: 'GET',
     path: '/latest/meta-data/iam/security-credentials/{role}',
-    handler: (request, reply) => {
-      awsCreds.containerRoleRequest(request.info.remoteAddress).then(res => {
+    handler: async (request, reply) => {
+      console.log(`Returning creds to ${request.info.remoteAddress}`)
+      try {
+        let res = await awsCreds.containerRoleRequest(request.info.remoteAddress)
         reply(res)
-      }).catch(err => {
-        reply({err: true, msg: err})
-      })
+      } catch (e) {
+        reply( {err: true, msg: e})
+      }
+      // .then(res => {
+      //   reply(res)
+      // }).catch(err => {
+      //   reply({err: true, msg: err})
+      // })
     }
   }]

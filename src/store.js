@@ -131,8 +131,9 @@ const actions = {
     commit('updateContainerSingle', assignIn(cont, {Transition: ''}))
   },
   getCurrentProfile({commit, state}) {
+    console.log('get current profile')
     return Vue.http.get(`http://${process.env.API_HOST}/aws/currentProfile`).then(res => {
-      commit('updateProfileName', res)
+      commit('updateProfileName', res.body.profileName)
     }).catch(err => {
       commit('err', err)
     })

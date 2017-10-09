@@ -27,8 +27,7 @@ export default {
 <style lang="scss">
 @import "../scss/global.scss";
 .subnav {
-  padding-top: 70px;
-  padding: 76px 0 10px 24px;
+  padding: 14px 0 10px 24px;
   position:relative;
   background-color:$blue;
   display: flex;

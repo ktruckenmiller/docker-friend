@@ -6,6 +6,7 @@ const Path = require('path');
 const Nes = require('nes')
 const Got = require('got')
 import AWSRoles from './awsRoles'
+import ErrorSockets from './errorSockets'
 const _ = require('lodash')
 
 
@@ -35,7 +36,7 @@ server.connection({
 
 
 
-server.register([Inert, Nes, AWSRoles], function (err) {
+server.register([Inert, Nes, AWSRoles, ErrorSockets], function (err) {
     if (err) {
         throw err;
     }

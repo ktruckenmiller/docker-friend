@@ -2,19 +2,19 @@
 
 let Server
 
-module.exports.update = (payload) => {
-  Server.publish('/aws', payload)
+module.exports.throwError = (payload) => {
+  Server.publish('/errors', payload)
 }
 
 
 module.exports.register = (server, options, next) => {
   Server = server
-  Server.subscription('/aws')
+  Server.subscription('/errors')
   next();
 }
 
 
 module.exports.register.attributes = {
-  name: 'awsRoleUpdater',
+  name: 'errorSockets',
   version: '1.0.0'
 };

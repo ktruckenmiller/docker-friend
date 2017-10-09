@@ -6,6 +6,7 @@ import colors from 'colors'
 import Docker from 'dockerode'
 import AWS from 'aws-sdk'
 import server from './app'
+import { throwError } from './errorSockets'
 
 
 import { findOne, update } from './database'
@@ -56,14 +57,14 @@ class AWSCreds {
       return false
     }
   }
-  hasCredentialsSet () {
-
-  }
   async getProfile() {
-    let tokens = await findOne('profile', {currentProfile: true})
-    if (tokens) {
-
+    let profile = await findOne('profile', {currentProfile: true})
+    if (this.profileMfaExpired(profile)) {
+      return
+    } else {
+      return profile
     }
+
   }
   getRoles () {
     if (!this.baseProfileSet()) {return []}
@@ -109,16 +110,15 @@ class AWSCreds {
 
   async getSessionToken (token = false) {
     let hasMFADevice = await this.getMFADevice()
-    console.log(hasMFADevice)
-    console.log(AWS.config.credentials)
     this._sts = new AWS.STS()
     const params = {
       DurationSeconds: 129600,
       SerialNumber: hasMFADevice,
       TokenCode: String(token)
     }
+    console.log('about to get session token with', params)
     let res = await this._sts.getSessionToken(params).promise()
-    console.log(res)
+
     return assignIn(res.Credentials, params)
 
   }
@@ -127,14 +127,19 @@ class AWSCreds {
 
   // public
   async setMFA (token) {
-
     let credentials = await this.getSessionToken(token)
-    if (credentials.err) {throw new Error('Could not set credentials.')}
-
+    if (credentials.AccessDenied) {
+      throw new Error(credentials)
+    }
+    await update('profile', {
+      currentProfile: true
+    },{
+      $set: {currentProfile: false}
+    }, {upsert: true})
     await update('profile', {
       profileName: this._userObj.currentProfile
     }, {
-      $set: omit(credentials, ['DurationSeconds'])
+      $set: assignIn(omit(credentials, ['DurationSeconds']), {currentProfile: true})
     }, { upsert: true })
     this.setBaseProfile()
   }
@@ -253,8 +258,7 @@ class AWSCreds {
         RoleArn: roleDetails.Arn,
         RoleSessionName: 'docker-friend'
       }).promise()
-      let newDetails =
-      await update('roles', {
+      let newDetails = await update('roles', {
         RoleName: roleDetails.RoleName,
         profile: this._userObj.currentProfile
       }, {
@@ -264,6 +268,7 @@ class AWSCreds {
       })
       return
     }catch (e) {
+      throwError(e)
       return {err: true, msg: e}
     }
     // store in database next to the role
@@ -279,12 +284,13 @@ class AWSCreds {
       // find if already assumed
       roleDetails = await findOne('roles', {Arn: roleArn, profile: this._userObj.currentProfile})
       if (!roleDetails) {
-        let roleDetails = await update('roles', {Arn: roleArn, profile: this._userObj.currentProfile})
+        let roleDetails = await update('roles', {Arn: roleArn, profile: this._userObj.currentProfile}, {$set: {role: role}}, {upsert: true})
       }
       // if not, lets assume it
     } else {
       roleDetails = await findOne('roles', {RoleName: role, profile: this._userObj.currentProfile})
     }
+
 
     // if expired or no creds, refresh
     try {
