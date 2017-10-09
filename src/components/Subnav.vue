@@ -8,10 +8,10 @@
       <!-- <li>Remove Exited</li>
       <li>Remove All</li> -->
     </ul>
-    <ul v-if="this.$route.name === 'Cloud'" class="cloud">
-      <!-- <li v-on:click="changeCloudSubpage" v-bind:class="{active: isCommit}"><i class="fa fa-github" aria-hidden="true"></i>commit</li>
-      <li v-on:click="changeCloudSubpage" v-bind:class="{active: isBuild}"><i class="fa fa-wrench" aria-hidden="true"></i>build</li>
-      <li v-on:click="changeCloudSubpage" v-bind:class="{active: isDeploy}"><i class="fa fa-server" aria-hidden="true"></i>deploy</li> -->
+    <ul v-if="this.$route.fullPath.includes('cloud')" class="cloud">
+      <li :class="{active: this.$route.name === 'Clusters'}"><router-link to="/cloud/clusters"><i class="fa fa-server" aria-hidden="true"></i>clusters</router-link></li>
+      <li :class="{active: this.$route.name === 'Services'}"><router-link to="/cloud/services"><i class="fa fa-pied-piper-alt" aria-hidden="true"></i>services</router-link></li>
+      <li :class="{active: this.$route.name === 'Domains'}"><router-link to="/cloud/domains"><i class="fa fa fa-ravelry" aria-hidden="true"></i>domains</router-link></li>
     </ul>
   </div>
 </template>
@@ -20,6 +20,11 @@
 export default {
   name: 'subnav',
   created() {
+  },
+  methods: {
+    changeCloudSubpage() {
+
+    }
   }
 }
 </script>

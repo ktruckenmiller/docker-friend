@@ -5,6 +5,10 @@ import Cloud from 'components/Cloud'
 import Containers from 'components/Containers'
 import Images from 'components/Images'
 
+import Clusters from 'components/cloud/Clusters'
+import Services from 'components/cloud/Services'
+import Domains from 'components/cloud/Domains'
+
 Vue.use(Router)
 
 export default new Router({
@@ -20,9 +24,19 @@ export default new Router({
       name: 'Images',
       component: Images
     },{
-      path: '/cloud',
-      name: 'Cloud',
-      component: Cloud
+      path: '/cloud', redirect: '/cloud/clusters'
+    },{
+      path: '/cloud/clusters',
+      name: 'Clusters',
+      component: Clusters
+    }, {
+      path: '/cloud/services',
+      name: 'Services',
+      component: Services
+    },{
+      path: '/cloud/domains',
+      name: 'Domains',
+      component: Domains
     }
   ]
 })
