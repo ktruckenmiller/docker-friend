@@ -22,8 +22,8 @@ iptables \
 # done
 
 if [ "$1" == "dev" ]; then
-  sh
-  # cd api && npm run dev
+  # sh
+  cd api && npm run dev
 else
   node api/app.js
 fi

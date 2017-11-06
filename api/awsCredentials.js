@@ -131,6 +131,7 @@ class AWSCreds {
     if (credentials.AccessDenied) {
       throw new Error(credentials)
     }
+
     await update('profile', {
       currentProfile: true
     },{
@@ -144,14 +145,18 @@ class AWSCreds {
     this.setBaseProfile()
   }
   profileMfaExpired (profileInQuestion) {
+    console.log('profile mfa expired')
+    console.log(profileInQuestion)
     try {
       return Date.parse(profileInQuestion.Expiration) < new Date().getTime()
     } catch (e) {return true}
   }
   async setBaseProfile (profile = false) {
     this._userObj.currentProfile = profile || this._userObj.currentProfile
-    // if we have a cached MFA session, let's look that up first
+    // if we have a cached MFA session, let's look that up first'
+    console.log(this._userObj.currentProfile)
     let profileInQuestion = await findOne('profile', {profileName: this._userObj.currentProfile})
+
     if (this.profileMfaExpired(profileInQuestion)) {
       this._userObj.baseCreds = new AWS.SharedIniFileCredentials({profile: this._userObj.currentProfile})
       if (!this.baseProfileSet()) { throw new Error("This profile doesn't exist.")}
@@ -273,6 +278,8 @@ class AWSCreds {
     // else assume container role  and store with role
     let assumedRole
     try {
+      console.log(AWS.config.credentials)
+      console.log(this._userObj)
       assumedRole = await this._sts.assumeRole({
         DurationSeconds: 3600,
         RoleArn: roleDetails.Arn,

@@ -9,8 +9,10 @@ RUN apk update && apk add net-tools iptables curl jq
 RUN npm install webpack hapi babel-cli -g
 # WORKDIR ./api
 # RUN npm run build
+
 COPY ./api /code/api
 WORKDIR /code/api
+RUN rm package-lock.json
 RUN npm install
 
 
