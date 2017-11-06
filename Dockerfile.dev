@@ -1,3 +1,3 @@
 FROM docker-friend
-
-RUN npm install -g nodemon
+WORKDIR /code
+RUN npm install -g nodemon babel-polyfill
