@@ -59,7 +59,7 @@ server.ext({
     type: 'onRequest',
     method: function (request, reply) {
         // check and make sure this is a local request?
-        // console.log(request.raw.req.headers)
+        console.log(request.raw.req.headers)
         reply.continue();
     }
 });
