@@ -37,10 +37,11 @@
           console.log(err)
         })
         client.subscribe('/errors', (res) => {
+          console.log(res)
           if ( res ) {
             this.$toast.open({
                     duration: 10000,
-                    message: `${res.message}`,
+                    message: `${res.msg}`,
                     position: 'is-top',
                     type: 'is-danger'
             })

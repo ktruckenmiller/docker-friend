@@ -28,10 +28,12 @@ export default new Router({
     },{
       path: '/cloud/clusters',
       name: 'Clusters',
+      props: { pageName: 'clusters' },
       component: Clusters
     }, {
       path: '/cloud/services',
       name: 'Services',
+      props: { pageName: 'services' },
       component: Services
     },{
       path: '/cloud/domains',

@@ -7,7 +7,7 @@ import Docker from 'dockerode'
 import AWS from 'aws-sdk'
 import server from './app'
 import { throwError } from './errorSockets'
-
+import Bounce from 'bounce'
 
 import { findOne, update } from './database'
 import {
@@ -190,31 +190,46 @@ class AWSCreds {
     return newObj
   }
 
-  async getContainerByIp (ipAddress) {
-    let matchingContainer = filter((await docker.listContainers({all: true})), (container) => {
-      try {
-        if (container.State === 'running') {
-          let network = Object.keys(container.NetworkSettings.Networks)[0]
-          return container.NetworkSettings.Networks[network].IPAddress === ipAddress
+  getContainerByIp (ipAddress) {
+    return new Promise((resolve, reject) => {
+      docker.listContainers({all: true}, function(err, containers) {
+        if(err) {
+          return reject(err)
         }
-      }catch(err) {}
-    })
+        let matchingContainer = filter((containers), (container) => {
 
-    matchingContainer = docker.getContainer(matchingContainer[0].Id)
-    return await new Promise((resolve, reject) => {
-      matchingContainer.inspect((err, res) => {
-        if (err) {reject(err)}
-        else {resolve(res)}
+            if (container.State === 'running') {
+              let network = Object.keys(container.NetworkSettings.Networks)[0]
+              return container.NetworkSettings.Networks[network].IPAddress === ipAddress
+            }
+
+        })
+        matchingContainer = docker.getContainer(matchingContainer[0].Id)
+        matchingContainer.inspect((err, res) => {
+          if (err) {
+            return reject(err)
+          }
+          return resolve(res)
+        })
       })
     })
   }
 
-  async getContainerRoleNameByIp (ipAddress) {
-    let container = await this.getContainerByIp(ipAddress)
-    let roleName = await this.getContainerRoleName(container)
+  async getContainerRoleNameByIp (ipAddress, getArn = false) {
+    try {
+      let container = await this.getContainerByIp(ipAddress)
+      let roleName = await this.getContainerRoleName(container, getArn)
+      if(!isString(roleName)) {
+        throwError("No role associated with this container. Set it by using `-e IAM_ROLE=my-role` or `-e IAM_ROLE_ARN=arn:aws:iam::<account>:role/your-role` on the container run.")
+        throw new Error("No role associated with this container. Set it by using `-e IAM_ROLE=my-role` or `-e IAM_ROLE_ARN=arn:aws:iam::<account>:role/your-role` on the container run.")
+      }
+      return roleName
+    }catch(err) {
+      Bounce.rethrow(err, 'system');
+      throwError(err)
+      throw new Error(err)
+    }
 
-    if (!roleName) { return {err: true, msg: "No role associated with this container. Set it by using `-e IAM_ROLE=my-role` or `-e IAM_ROLE_ARN=arn:aws:iam::<account>:role/your-role` on the container run."}}
-    return roleName
   }
   async getContainerRoleArnByIp (ipAddress) {
     let container = await this.getContainerByIp(ipAddress)
@@ -232,14 +247,20 @@ class AWSCreds {
     }
   }
 
-  getContainerRoleName (container) {
+
+  getContainerRoleName (container, isArn) {
     let envVars = container.Config.Env
     return chain(envVars)
     .filter((env) => {
-      return includes(env, 'IAM_ROLE', 'IAM_ROLE_ARN')
+      return includes(env, 'IAM_ROLE')
     }).map((env) => {
       let r = split(env, '=')[1]
-      return last(split(r, '/'))
+      if(isArn) {
+        return r
+      } else {
+        return last(split(r, '/'))
+      }
+
     }).value()[0]
   }
 
@@ -250,10 +271,9 @@ class AWSCreds {
   async assumeContainerRole (roleDetails) {
     // if userObj expired, tell user to refresh MFA
     // else assume container role  and store with role
-    console.log('Assuming role...')
     let assumedRole
     try {
-       assumedRole = await this._sts.assumeRole({
+      assumedRole = await this._sts.assumeRole({
         DurationSeconds: 3600,
         RoleArn: roleDetails.Arn,
         RoleSessionName: 'docker-friend'
@@ -268,18 +288,37 @@ class AWSCreds {
       })
       return
     }catch (e) {
+      Bounce.rethrow(e, 'system');
+      e.message += " Not Authorized to assume " + roleDetails.Arn
       throwError(e)
-      return {err: true, msg: e}
+      throw new Error(e)
     }
-    // store in database next to the role
 
   }
 
   async containerRoleRequest (ipAddress) {
-    let roleFail, roleDetails
-    let role = await this.getContainerRoleNameByIp(ipAddress)
-    let roleArn = await this.getContainerRoleArnByIp(ipAddress)
 
+    let roleFail, roleDetails, roleArn, role
+    // not getting past here
+    try {
+      role = await this.getContainerRoleNameByIp(ipAddress, true)
+
+      // not getting role
+      if(includes(role, "arn:aws:iam::")) {
+        roleArn = role
+        role = await this.getContainerRoleNameByIp(ipAddress)
+      } else {
+        roleArn = await this.getContainerRoleArnByIp(ipAddress)
+      }
+    }catch (err) {
+      Bounce.rethrow(err, 'system');
+      throw new Error(err);
+    }
+    if(!isString(roleArn)) {
+      throw new Error(`No role found in this account by this name: ${role}`)
+    }
+
+    // do we know if this is
     if (roleArn) {
       // find if already assumed
       roleDetails = await findOne('roles', {Arn: roleArn, profile: this._userObj.currentProfile})
@@ -290,25 +329,39 @@ class AWSCreds {
     } else {
       roleDetails = await findOne('roles', {RoleName: role, profile: this._userObj.currentProfile})
     }
+    if(!roleDetails) {
+      throw new Error(`Role does not exist for ${role}`)
+    }
 
 
     // if expired or no creds, refresh
     try {
       if (this.credsExpired(roleDetails.TempCreds.Expiration)) {
-        roleFail = await this.assumeContainerRole(roleDetails)
+        console.log('creds expired...')
       } else {
+        console.log('creds not expired, returning')
         return this.getCredObject(roleDetails.TempCreds)
       }
     } catch (e) {
-      roleFail = await this.assumeContainerRole(roleDetails)
+      console.log(e)
     }
-    roleDetails = await findOne('roles', {RoleName: role, profile: this._userObj.currentProfile})
+    try {
+      console.log('assuming container role')
+      roleFail = await this.assumeContainerRole(roleDetails)
+      roleDetails = await findOne('roles', {RoleName: role, profile: this._userObj.currentProfile})
+    }catch (e) {
+      Bounce.rethrow(e, 'system');
+      throwError(e)
+      throw new Error(e)
+    }
+
 
 
     if (roleDetails.TempCreds) {
       return this.getCredObject(roleDetails.TempCreds)
     } else {
-      return roleFail
+      throwError("Can't get tempcreds obj")
+      throw new Error("can't get tmp creds object")
     }
   }
   filterContainers (containers) {

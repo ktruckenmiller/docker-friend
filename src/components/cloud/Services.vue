@@ -1,12 +1,22 @@
 <template lang="html">
-  <div>services</div>
+  <div>
+    <CloudLoader></CloudLoader>
+  </div>
+
 </template>
 
 <script>
+import CloudLoader from './Loader'
 export default {
-  name: 'services'
+  name: 'services',
+  components: {CloudLoader}
 }
 </script>
 
-<style lang="css">
+<style lang="scss">
+  @import "../../scss/global.scss";
+  html {
+    // background-image: radial-gradient(circle farthest-corner at center, #FFFFFF 0%, $blue 100%);
+  }
+
 </style>

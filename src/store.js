@@ -1,7 +1,15 @@
 import Vue from 'vue'
 import Vuex from 'vuex'
 import docker from 'functions/docker'
-import { map, find, assignIn, clone } from 'lodash'
+import {
+  map,
+  find,
+  assignIn,
+  clone,
+  last,
+  chain,
+  sortBy
+} from 'lodash'
 
 Vue.use(Vuex)
 
@@ -12,6 +20,9 @@ const state = {
   containers: [],
   containerState: [],
   containerImages: [],
+  clusters: [],
+  clusterState: {},
+  activeCluster: "",
   error: "",
   profileNames: [],
   modalState: false,
@@ -36,6 +47,16 @@ const mutations = {
   logOut(state) {
     state.currentProfile = ''
   },
+  updateClusters(state, clusters) {
+    state.clusters = clusters
+  },
+  updateClusterState(state, clusterDetails) {
+    console.log(clusterDetails)
+    let newObj = {}
+    newObj[clusterDetails.clusterName] = clusterDetails
+
+    state.clusterState = assignIn(clone(state.clusterState), newObj)
+  },
   updateContainers(state, containers) {
     state.containers = map(containers, (newContainer) => {
       let oldContainer = find(state.containers, (val) => {
@@ -56,6 +77,9 @@ const mutations = {
         return oldContainer
       }
     })
+  },
+  setCluster(state, clusterName) {
+    state.activeCluster = clusterName
   },
   updateImages(state, new_images) {
     state.containerImages = JSON.parse(new_images)
@@ -92,6 +116,22 @@ const actions = {
   },
   updateImages({commit, state}, newImages) {
     commit('updateImages', newImages)
+  },
+  updateClusters({commit, state}) {
+    return Vue.http.get(`http://${process.env.API_HOST}/aws/clusters`).then(res => {
+      commit('updateClusters', res.body)
+    }).catch(err => {
+      console.log(err)
+      commit('err', err)
+    })
+  },
+  setClusterActive({commit, state}, clusterName) {
+    commit('setCluster', clusterName)
+    return Vue.http.get(`http://${process.env.API_HOST}/aws/cluster/${clusterName}`).then(res => {
+      commit('updateClusterState', res.body)
+    }).catch(err => {
+      commit('err', err)
+    })
   },
   removeContainer( {commit, state}, container) {
     docker.removeContainer(container).then(res => {
@@ -183,7 +223,31 @@ const actions = {
 
 // getters are functions
 const getters = {
-  evenOrOdd: state => state.count % 2 === 0 ? 'even' : 'odd'
+  clusterObjects: state => {
+    return map(state.clusters, (val) => {
+      return {
+        arn: val,
+        clusterName: last(val.split('/')),
+        region: val.split(':')[3],
+        account: val.split(':')[4]
+      }
+    })
+  },
+  currentCluster: state => {
+    return find(state.clusterState, (val) => {
+      return val.clusterName === state.activeCluster
+    })
+  },
+  currentServices: (state, getters) => {
+    return chain(getters.currentCluster).find((val, key) => {
+      return key === 'services'
+    }).sortBy('serviceName').value()
+  },
+  currentInstances: (state, getters) => {
+    return find(getters.currentCluster, (val, key) => {
+      return key === 'instances'
+    })
+  }
 }
 
 // A Vuex instance is created by combining the state, mutations, actions,

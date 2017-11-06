@@ -3,7 +3,8 @@
 let Server
 
 module.exports.throwError = (payload) => {
-  Server.publish('/errors', payload)
+  console.log(payload.message)
+  Server.publish('/errors', {msg: payload.message})
 }
 
 
