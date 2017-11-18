@@ -1,70 +1,62 @@
-import assert from 'assert';
+'use strict'
+const Lab = require('lab');
+const lab = exports.lab = Lab.script();
+const Code = require('code');
+const expect = Code.expect;
+const awsCreds = require('../awsCredentials').AWSCreds
+console.log(awsCreds)
 
-
-import { AWSCreds } from '../AWSCredentials.js';
+const before = lab.before;
 let aws
-describe('AWS Credential has default creds', () => {
+lab.experiment('awscredentials', () => {
 
   before(async () => {
-    aws = new AWSCreds()
+    aws = new awsCreds()
     await aws.init()
   })
-  it('should load creds without error', async () => {
-    assert(aws.baseProfileSet())
-  })
-  it('should get roles', async () => {
-    assert((await aws.getRoles()).length > 0)
-  })
+  lab.test('init aws creds', async () => {
+    expect(aws.baseProfileSet()).to.equal(true)
+    expect((await aws.getRoles()).length).to.be.above(0)
+    expect(await aws.getMFADevice()).to.be.a.string().and.contain(['arn:aws:iam::'])
+    expect(aws.getProfileNames().length).to.equal(2)
 
-  it('should get mfa device', async () => {
-    assert.equal((await aws.getMFADevice()).indexOf('arn:aws:iam::'), 0)
-  })
-
-  it('should update roles into the db', async () => {
-    assert.ok(await aws.setRoles([{RoleName: 'albertson', boston: 'shoey'}]))
-    assert.ok(await aws.setRoles([{RoleName: 'lazy', boston: 'shoey'}]))
-    let testRole = await aws.getRole('lazy')
-    assert.equal(testRole.profile, 'default')
-    assert.equal(testRole.RoleName, 'lazy')
-  })
-
-  it('should not authenticate the token', async () => {
-    assert.ok((await aws.getSessionToken(652922)).err)
-    assert.ok((await aws.getSessionToken()).err)
-    // test a good token
-    // console.log(await aws.setMFA(519598));
-  })
-
-  it('should set the base profile', async () => {
-    // assert.ok(await aws.setBaseProfile('default'))
-    // this is another profile that's not the default
-    assert.ok(await aws.setBaseProfile('fetchit'))
-    // throws err because it doesnt exist
-    // assert.ok((await aws.setBaseProfile('boston')).err)
-  })
-
-  it('should return all available profiles', (done) => {
-    assert.equal(aws.getProfileNames().length, 2)
-    done()
-  })
-
-
-});
-
-
-describe('AWS Credential helper no default creds', () => {
-  before(() => {
-    aws = new AWSCreds('boston')
-  })
-  it('wont find credentials', done => {
-    assert(aws.baseProfileSet() === false)
-    done()
   });
-  it('should get  0 roles', async () => {
-    // console.log()
-    assert.equal(await aws.getRoles().length, 0)
+
+  lab.test('role stuff', async () => {
+    try {
+      await aws.getRole('boston')
+    }catch(err) {
+      expect(err).to.be.an.error("Could not find the profile boston.")
+    }
+    expect(await aws.getRole('Boston')).to.include(['profile', 'Arn', 'RoleId'])
   })
-  // it('should NOT get mfa device', async () => {
-  //   assert.equal((await aws.getMFADevice()).indexOf('arn:aws:iam::'), -1)
-  // })
-});
+  lab.test('session token stuff', async () => {
+    // aws._sts = {
+    //   getSessionToken: (params = {}) => {
+    //     return {
+    //       promise: (params) => {
+    //         return new Promise((resolve, reject) => {
+    //           if (null) { reject()}
+    //           resolve()
+    //
+    //         })
+    //       }
+    //     }
+    //   }
+    // }
+    aws.getMFADevice = () => {
+      return new Promise((resolve, reject) => {resolve('arn:thing'); if(null) {reject()}})
+    }
+    console.log(await aws.getSessionToken(12345))
+
+  })
+})
+lab.experiment('no-aws credentials', () => {
+  lab.test('AWS Credential helper no default creds', () => {
+    try {
+      new awsCreds('boston')
+    }catch(err) {
+      expect(err).to.be.an.error("This profile doesn't exist.")
+    }
+  });
+})

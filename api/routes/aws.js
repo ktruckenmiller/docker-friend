@@ -23,7 +23,7 @@ module.exports = [{
     method: 'GET',
     path: '/aws/clusters',
     handler: (request, reply) => {
-      let ecs = new AWS.ECS({region: 'us-east-1'})
+      let ecs = new AWS.ECS({region: 'us-west-2'})
       let clusters = ecs.listClusters({}, (err, res) => {
         if(err) {return reply(err)}
         reply(res.clusterArns)

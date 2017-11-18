@@ -1,15 +1,14 @@
 'use strict'
-
 import fs from 'fs'
 import ini from 'ini'
 import colors from 'colors'
 import Docker from 'dockerode'
 import AWS from 'aws-sdk'
-import server from './app'
 import { throwError } from './errorSockets'
 import Bounce from 'bounce'
 
 import { findOne, update } from './database'
+
 import {
   isString,
   concat,
@@ -31,12 +30,14 @@ const docker = new Docker();
 
 
 class AWSCreds {
-
-  constructor (profileName = 'default') {
+  constructor () {
     // Private Vars
-    this._availableProfiles = ini.parse(fs.readFileSync(process.env.HOME + '/.aws/credentials', 'utf-8'))
     this._sts = new AWS.STS()
     this._iam = new AWS.IAM()
+    this._roles = []
+  }
+  async init (profileName = 'default') {
+    this._availableProfiles = ini.parse(fs.readFileSync(process.env.HOME + '/.aws/credentials', 'utf-8'))
     this._userObj = {
       currentProfile: profileName,
       baseCreds: new AWS.SharedIniFileCredentials({profile: profileName}),
@@ -45,10 +46,11 @@ class AWSCreds {
     // if we want to do a config file, we should make sure and load the base
     // that the config requires instead
     AWS.config.credentials = this._userObj.baseCreds
-    this._roles = []
-  }
-  async init () {
-    await this.setBaseProfile()
+    try {
+      await this.setBaseProfile()
+    } catch(err) {
+      throw new Error(err)
+    }
   }
   baseProfileSet () {
     if (isString(this._userObj.baseCreds.accessKeyId)) {
@@ -90,10 +92,13 @@ class AWSCreds {
       return update('roles', {RoleName: role.RoleName, profile: this._userObj.currentProfile}, {$set: assignIn(role, {profile: this._userObj.currentProfile})}, {upsert: true})
     })
     let res = await Promise.all(newRoles)
+
     return res
   }
   async getRole (name) {
-    return await findOne('roles', {RoleName: name, profile: this._userObj.currentProfile})
+    let roleName = await findOne('roles', {RoleName: name, profile: this._userObj.currentProfile})
+    if(!roleName) { throw new Error(`Could not find the profile ${name}.`)}
+    return roleName
   }
   getMFADevice () {
     if (!this.baseProfileSet()) {return}
@@ -110,7 +115,9 @@ class AWSCreds {
 
   async getSessionToken (token = false) {
     let hasMFADevice = await this.getMFADevice()
-    this._sts = new AWS.STS()
+    console.log("boston")
+    if(!hasMFADevices) {throw new Error('Profile does not have an MFA device detected.')}
+    if(!token) {throw new Error('You need to supply an auth token.')}
     const params = {
       DurationSeconds: 129600,
       SerialNumber: hasMFADevice,
@@ -154,7 +161,6 @@ class AWSCreds {
   async setBaseProfile (profile = false) {
     this._userObj.currentProfile = profile || this._userObj.currentProfile
     // if we have a cached MFA session, let's look that up first'
-    console.log(this._userObj.currentProfile)
     let profileInQuestion = await findOne('profile', {profileName: this._userObj.currentProfile})
 
     if (this.profileMfaExpired(profileInQuestion)) {
@@ -278,8 +284,6 @@ class AWSCreds {
     // else assume container role  and store with role
     let assumedRole
     try {
-      console.log(AWS.config.credentials)
-      console.log(this._userObj)
       assumedRole = await this._sts.assumeRole({
         DurationSeconds: 3600,
         RoleArn: roleDetails.Arn,

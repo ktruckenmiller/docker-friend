@@ -16,7 +16,7 @@ class ECS {
   getInstances(clusterName) {
     console.log("get container instances")
     return new Promise((resolve, reject) => {
-      let ecs = new AWS.ECS({region: 'us-east-1'})
+      let ecs = new AWS.ECS({region: 'us-west-2'})
       let containerInstances = []
       ecs.listContainerInstances({
           cluster: clusterName
@@ -37,7 +37,7 @@ class ECS {
   }
   async getServiceInfo(services, clusterName) {
     if (isEmpty(services)) {return []}
-    let ecs = new AWS.ECS({region: 'us-east-1'})
+    let ecs = new AWS.ECS({region: 'us-west-2'})
     let reqServices = chunk(services, 10)
     let responses = map(reqServices, (srvs) => {
       return new Promise((resolve, reject) => {
@@ -62,7 +62,7 @@ class ECS {
   getServices(clusterName) {
     console.log("get services " + clusterName)
     return new Promise((resolve, reject) => {
-      let ecs = new AWS.ECS({region: 'us-east-1'})
+      let ecs = new AWS.ECS({region: 'us-west-2'})
       let services = []
       ecs.listServices({cluster: clusterName}).eachPage((err, data, done) => {
         if (err) {
@@ -81,8 +81,8 @@ class ECS {
   }
   async getInstanceInfo(instances, clusterName) {
     if (isEmpty(instances)) {return []}
-    let ecs = new AWS.ECS({region: 'us-east-1'})
-    let ec2 = new AWS.EC2({region: 'us-east-1'})
+    let ecs = new AWS.ECS({region: 'us-west-2'})
+    let ec2 = new AWS.EC2({region: 'us-west-2'})
     let reqInstances = chunk(instances, 10)
     let responses = map(reqInstances, (instances) => {
       return new Promise((resolve, reject) => {

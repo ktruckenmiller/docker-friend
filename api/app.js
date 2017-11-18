@@ -1,5 +1,3 @@
-require("babel-core/register");
-require("babel-polyfill");
 const Hapi = require('hapi');
 const Inert = require('inert');
 const Path = require('path');
@@ -10,7 +8,7 @@ import ErrorSockets from './errorSockets'
 const _ = require('lodash')
 
 
-import { AWSCreds } from './awsCredentials'
+import AWSCreds from './awsCredentials'
 const awsCreds = new AWSCreds()
 awsCreds.init()
 
