@@ -114,20 +114,20 @@ class AWSCreds {
   }
 
   async getSessionToken (token = false) {
-    let hasMFADevice = await this.getMFADevice()
-    console.log("boston")
-    if(!hasMFADevices) {throw new Error('Profile does not have an MFA device detected.')}
-    if(!token) {throw new Error('You need to supply an auth token.')}
-    const params = {
-      DurationSeconds: 129600,
-      SerialNumber: hasMFADevice,
-      TokenCode: String(token)
+    let params = {
+      DurationSeconds: 3600
     }
-    console.log('about to get session token with', params)
+    if(token) {
+      let hasMFADevice = await this.getMFADevice()
+      if(!hasMFADevice) {throw new Error('Profile does not have an MFA device detected.')}
+      params = assignIn(params, {
+        SerialNumber: hasMFADevice,
+        TokenCode: String(token),
+        DurationSeconds: 129600
+      })
+    }
     let res = await this._sts.getSessionToken(params).promise()
-
     return assignIn(res.Credentials, params)
-
   }
 
 
@@ -152,10 +152,8 @@ class AWSCreds {
     this.setBaseProfile()
   }
   profileMfaExpired (profileInQuestion) {
-    console.log('profile mfa expired')
-    console.log(profileInQuestion)
     try {
-      return Date.parse(profileInQuestion.Expiration) < new Date().getTime()
+      return this.credsExpired(profileInQuestion.Expiration)
     } catch (e) {return true}
   }
   async setBaseProfile (profile = false) {
@@ -276,6 +274,7 @@ class AWSCreds {
   }
 
   credsExpired (expiration) {
+    if(!isString(expiration)) { throw new Error(`Cred expiration: ${expiration} is not a date.`)}
     return Date.parse(expiration) < new Date().getTime()
   }
 

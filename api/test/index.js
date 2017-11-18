@@ -21,7 +21,6 @@ lab.experiment('awscredentials', () => {
     expect(aws.getProfileNames().length).to.equal(2)
 
   });
-
   lab.test('role stuff', async () => {
     try {
       await aws.getRole('boston')
@@ -31,24 +30,38 @@ lab.experiment('awscredentials', () => {
     expect(await aws.getRole('Boston')).to.include(['profile', 'Arn', 'RoleId'])
   })
   lab.test('session token stuff', async () => {
-    // aws._sts = {
-    //   getSessionToken: (params = {}) => {
-    //     return {
-    //       promise: (params) => {
-    //         return new Promise((resolve, reject) => {
-    //           if (null) { reject()}
-    //           resolve()
-    //
-    //         })
-    //       }
-    //     }
-    //   }
-    // }
     aws.getMFADevice = () => {
-      return new Promise((resolve, reject) => {resolve('arn:thing'); if(null) {reject()}})
+      return new Promise((resolve, reject) => {
+        resolve('arn:thing');
+        if(null) {
+          reject()
+        }
+      })
     }
-    console.log(await aws.getSessionToken(12345))
+    try {
+      await aws.getSessionToken(12345)
+    }catch(err) {
+      expect(err).to.be.an.error("1 validation error detected: Value '12345' at 'tokenCode' failed to satisfy constraint: Member must have length greater than or equal to 6")
+    }
 
+    try {
+      expect(await aws.getSessionToken()).to.be.an.object()
+    } catch(err) {
+      console.log(err)
+    }
+
+  })
+  lab.test('profile session token expired', () => {
+    // creds have expired
+    let date = new Date()
+    date.setDate(date.getDate() - 4)
+    date = date.toISOString().substring(0,19)+'Z'
+    expect(aws.credsExpired(date))
+
+    let notExpiredDate = new Date()
+    notExpiredDate.setDate(notExpiredDate.getDate() + 4)
+    notExpiredDate = notExpiredDate.toISOString().substring(0,19)+'Z'
+    expect(aws.credsExpired(notExpiredDate)).to.be.false()
   })
 })
 lab.experiment('no-aws credentials', () => {
