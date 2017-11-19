@@ -11,6 +11,7 @@ import { findOne, update } from './database'
 
 import {
   isString,
+  isObject,
   concat,
   map,
   assignIn,
@@ -40,14 +41,17 @@ class AWSCreds {
     this._availableProfiles = ini.parse(fs.readFileSync(process.env.HOME + '/.aws/credentials', 'utf-8'))
     this._userObj = {
       currentProfile: profileName,
-      baseCreds: new AWS.SharedIniFileCredentials({profile: profileName}),
       mfaDevice: ''
     }
-    // if we want to do a config file, we should make sure and load the base
-    // that the config requires instead
-    AWS.config.credentials = this._userObj.baseCreds
+
+    let profileObj = await findOne('profile', {currentProfile: true})
+    if (isObject(profileObj)) {
+      // found a profile that we're Using
+      profileName = profileObj.profileName
+    }
+
     try {
-      await this.setBaseProfile()
+      await this.setBaseProfile(profileName)
     } catch(err) {
       throw new Error(err)
     }
@@ -90,7 +94,12 @@ class AWSCreds {
   }
   async setRoles (roles) {
     let newRoles = map(roles, (role) => {
-      return update('roles', {RoleName: role.RoleName, profile: this._userObj.currentProfile}, {$set: assignIn(role, {profile: this._userObj.currentProfile})}, {upsert: true})
+      return update('roles', {
+          RoleName: role.RoleName,
+          profile: this._userObj.currentProfile
+        }, {$set: assignIn(role, {
+          profile: this._userObj.currentProfile
+        })}, {upsert: true})
     })
     let res = await Promise.all(newRoles)
     console.log('Refreshed all roles.')
@@ -127,6 +136,7 @@ class AWSCreds {
         DurationSeconds: 129600
       })
     }
+    this._sts = new AWS.STS()
     let res = await this._sts.getSessionToken(params).promise()
     return assignIn(res.Credentials, params)
   }
@@ -158,20 +168,24 @@ class AWSCreds {
     } catch (e) {return true}
   }
   async setBaseProfile (profile = false) {
+    console.log(profile)
     this._userObj.currentProfile = profile || this._userObj.currentProfile
     // if we have a cached MFA session, let's look that up first'
     let profileInQuestion = await findOne('profile', {profileName: this._userObj.currentProfile})
 
     if (this.profileMfaExpired(profileInQuestion)) {
       this._userObj.baseCreds = new AWS.SharedIniFileCredentials({profile: this._userObj.currentProfile})
+      console.log('Using base credentials')
       if (!this.baseProfileSet()) { throw new Error("This profile doesn't exist.")}
       AWS.config.credentials = this._userObj.baseCreds
     } else {
+
       this._userObj.baseCreds = new AWS.Credentials(
           profileInQuestion.AccessKeyId,
           profileInQuestion.SecretAccessKey,
           profileInQuestion.SessionToken
         )
+      console.log('Using session elevated MFA credentials')
       AWS.config.credentials = this._userObj.baseCreds
     }
 
@@ -283,26 +297,33 @@ class AWSCreds {
     // if userObj expired, tell user to refresh MFA
     // else assume container role  and store with role
     console.log('Assuming role with this profile')
+    console.log(roleDetails)
     this._sts = new AWS.STS()
-    let assumedRole
+    let assumedRole, roleUpdateObj
     try {
       assumedRole = await this._sts.assumeRole({
         DurationSeconds: 3600,
         RoleArn: roleDetails.Arn,
         RoleSessionName: 'docker-friend'
       }).promise()
+      console.log(assumedRole)
+
+    } catch(e) {
+      throwError(e)
+    }
+    try {
       let newDetails = await update('roles', {
-        RoleName: roleDetails.RoleName,
-        profile: this._userObj.currentProfile
+        _id: roleDetails._id
       }, {
-        $set: assignIn(roleDetails, {TempCreds: assumedRole.Credentials})
+        $set: assignIn(omit(roleDetails, '_id'), {TempCreds: assumedRole.Credentials})
       }, {
         upsert: true
       })
-      return
+      console.log(newDetails)
+      return roleDetails._id
     }catch (e) {
       // Bounce.rethrow(e, 'system');
-      e.message += " Not Authorized to assume " + roleDetails.Arn
+      // e.message += " Not Authorized to assume " + roleDetails.Arn
       throwError(e)
       throw new Error(e)
     }
@@ -327,10 +348,12 @@ class AWSCreds {
       Bounce.rethrow(err, 'system');
       throw new Error(err);
     }
+
     if(!isString(roleArn)) {
       throw new Error(`No role found in this account by this name: ${role}`)
     }
-
+    console.log(roleArn)
+    console.log(role)
     // do we know if this is
     if (roleArn) {
       // find if already assumed
@@ -342,9 +365,9 @@ class AWSCreds {
     } else {
       roleDetails = await findOne('roles', {RoleName: role, profile: this._userObj.currentProfile})
     }
-    if(!roleDetails) {
-      throw new Error(`Role does not exist for ${role}`)
-    }
+    // if(!roleDetails) {
+    //   throw new Error(`Role does not exist for ${role}`)
+    // }
 
 
     // if expired or no creds, refresh
@@ -356,12 +379,13 @@ class AWSCreds {
         return this.getCredObject(roleDetails.TempCreds)
       }
     } catch (e) {
-      console.log(e)
+      console.log()
     }
     try {
       console.log('assuming container role')
-      roleFail = await this.assumeContainerRole(roleDetails)
-      roleDetails = await findOne('roles', {RoleName: role, profile: this._userObj.currentProfile})
+      let roleId = await this.assumeContainerRole(roleDetails)
+      roleDetails = await findOne('roles', {_id: roleId})
+      console.log("Found container role")
     }catch (e) {
       Bounce.rethrow(e, 'system');
       throwError(e)
@@ -369,7 +393,7 @@ class AWSCreds {
     }
 
 
-
+    console.log(roleDetails)
     if (roleDetails.TempCreds) {
       return this.getCredObject(roleDetails.TempCreds)
     } else {
