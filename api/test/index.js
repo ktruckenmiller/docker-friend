@@ -29,7 +29,7 @@ lab.experiment('awscredentials', () => {
     }
     expect(await aws.getRole('Boston')).to.include(['profile', 'Arn', 'RoleId'])
   })
-  lab.test('session token stuff', async () => {
+  lab.test('session token', async () => {
     aws.getMFADevice = () => {
       return new Promise((resolve, reject) => {
         resolve('arn:thing');
@@ -63,6 +63,8 @@ lab.experiment('awscredentials', () => {
     notExpiredDate = notExpiredDate.toISOString().substring(0,19)+'Z'
     expect(aws.credsExpired(notExpiredDate)).to.be.false()
   })
+
+
 })
 lab.experiment('no-aws credentials', () => {
   lab.test('AWS Credential helper no default creds', () => {

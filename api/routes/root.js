@@ -1,8 +1,5 @@
 
-import { AWSCreds } from '../awsCredentials'
-const awsCreds = new AWSCreds()
-awsCreds.init()
-
+const awsCreds = require('../awsCredentials').awsCreds
 const Got = require('got')
 
 const Docker = require('dockerode')
@@ -45,6 +42,7 @@ module.exports = [{
       method: 'GET',
       path: '/profiles',
       handler: function(err, reply) {
+        console.log(awsCreds)
         reply(awsCreds.getProfileNames())
       }
     }

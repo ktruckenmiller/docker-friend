@@ -71,6 +71,7 @@ class AWSCreds {
   getRoles () {
     if (!this.baseProfileSet()) {return []}
     let roles = []
+    console.log('Refreshing iam roles...')
     return new Promise((resolve, reject) => {
       this._iam = new AWS.IAM()
       this._iam.listRoles({}).eachPage((err, data, done) => {
@@ -92,7 +93,7 @@ class AWSCreds {
       return update('roles', {RoleName: role.RoleName, profile: this._userObj.currentProfile}, {$set: assignIn(role, {profile: this._userObj.currentProfile})}, {upsert: true})
     })
     let res = await Promise.all(newRoles)
-
+    console.log('Refreshed all roles.')
     return res
   }
   async getRole (name) {
@@ -274,13 +275,15 @@ class AWSCreds {
   }
 
   credsExpired (expiration) {
-    if(!isString(expiration)) { throw new Error(`Cred expiration: ${expiration} is not a date.`)}
+    // if(!isString(expiration)) { throw new Error(`Cred expiration: ${expiration} is not a date.`)}
     return Date.parse(expiration) < new Date().getTime()
   }
 
   async assumeContainerRole (roleDetails) {
     // if userObj expired, tell user to refresh MFA
     // else assume container role  and store with role
+    console.log('Assuming role with this profile')
+    this._sts = new AWS.STS()
     let assumedRole
     try {
       assumedRole = await this._sts.assumeRole({
@@ -298,7 +301,7 @@ class AWSCreds {
       })
       return
     }catch (e) {
-      Bounce.rethrow(e, 'system');
+      // Bounce.rethrow(e, 'system');
       e.message += " Not Authorized to assume " + roleDetails.Arn
       throwError(e)
       throw new Error(e)
@@ -386,4 +389,7 @@ class AWSCreds {
     return filtered
   }
 }
-export { AWSCreds }
+
+let obj = new AWSCreds()
+
+module.exports.awsCreds = obj

@@ -1,22 +1,18 @@
-import { AWSCreds } from '../awsCredentials'
+const awsCreds = require('../awsCredentials').awsCreds
 import { update } from '../awsRoles'
 import {throwError} from '../errorSockets'
 import {ECS} from './ecs'
 import AWS from 'aws-sdk'
 
 
-
 import Bounce from 'bounce'
-const awsCreds = new AWSCreds()
 const ecs = new ECS()
-awsCreds.init()
+// awsCreds.init()
 module.exports = [{
     method: 'GET',
     path: '/aws/currentProfile',
     handler: async (request, reply) => {
       let profile = await awsCreds.getProfile()
-      console.log(profile)
-      console.log('profile^^')
       reply(profile)
     }
   },{

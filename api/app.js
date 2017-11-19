@@ -5,12 +5,9 @@ const Nes = require('nes')
 const Got = require('got')
 import AWSRoles from './awsRoles'
 import ErrorSockets from './errorSockets'
+const awsCreds = require('./awsCredentials').awsCreds
 const _ = require('lodash')
 
-
-import AWSCreds from './awsCredentials'
-const awsCreds = new AWSCreds()
-awsCreds.init()
 
 const Routes = require('./routes/index')
 
@@ -34,10 +31,11 @@ server.connection({
 
 
 
-server.register([Inert, Nes, AWSRoles, ErrorSockets], function (err) {
+server.register([Inert, Nes, AWSRoles, ErrorSockets], async (err) => {
     if (err) {
         throw err;
     }
+    await awsCreds.init()
     server.route(Routes)
     server.subscription('/containers')
     server.subscription('/images')
