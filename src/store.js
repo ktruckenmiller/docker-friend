@@ -180,6 +180,7 @@ const actions = {
   },
   getProfileNames({commit, state}) {
     return Vue.http.get(`http://${process.env.API_HOST}/aws/profiles`).then(res => {
+      console.log(res.body)
       commit('profileNames', res.body)
     }).catch(err => {
       commit('err', err)

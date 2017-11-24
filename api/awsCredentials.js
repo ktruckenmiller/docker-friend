@@ -14,6 +14,7 @@ import {
   isObject,
   concat,
   map,
+  has,
   assignIn,
   pluck,
   omit,
@@ -36,15 +37,31 @@ class AWSCreds {
     this._sts = new AWS.STS()
     this._iam = new AWS.IAM()
     this._roles = []
+    this.update = update
+    this.findOne = findOne
+  }
+  checkAWSProfiles (profileName) {
+    return new Promise((resolve, reject) => {
+      let profiles = ini.parse(fs.readFileSync(process.env.HOME + '/.aws/credentials', 'utf-8'))
+      if (!has(profiles, profileName)) {
+        throw Error(`No profile with this name: ${profileName}`)
+      } else {
+        resolve(profiles)
+      }
+    })
+  }
+  getProfileNames () {
+    return map(ini.parse(fs.readFileSync(process.env.HOME + '/.aws/credentials', 'utf-8')), (val, key) => {
+      return key
+    })
   }
   async init (profileName = 'default') {
-    this._availableProfiles = ini.parse(fs.readFileSync(process.env.HOME + '/.aws/credentials', 'utf-8'))
+    this._availableProfiles = this.checkAWSProfiles(profileName)
     this._userObj = {
       currentProfile: profileName,
       mfaDevice: ''
     }
-
-    let profileObj = await findOne('profile', {currentProfile: true})
+    let profileObj = await this.findOne('profile', {currentProfile: true})
     if (isObject(profileObj)) {
       // found a profile that we're Using
       profileName = profileObj.profileName
@@ -64,7 +81,7 @@ class AWSCreds {
     }
   }
   async getProfile() {
-    let profile = await findOne('profile', {currentProfile: true})
+    let profile = await this.findOne('profile', {currentProfile: true})
     if (this.profileMfaExpired(profile)) {
       return
     } else {
@@ -94,7 +111,7 @@ class AWSCreds {
   }
   async setRoles (roles) {
     let newRoles = map(roles, (role) => {
-      return update('roles', {
+      return this.update('roles', {
           RoleName: role.RoleName,
           profile: this._userObj.currentProfile
         }, {$set: assignIn(role, {
@@ -106,17 +123,19 @@ class AWSCreds {
     return res
   }
   async getRole (name) {
-    let roleName = await findOne('roles', {RoleName: name, profile: this._userObj.currentProfile})
-    if(!roleName) { throw new Error(`Could not find the profile ${name}.`)}
-    return roleName
+    return await this.findOne('roles', {RoleName: name, profile: this._userObj.currentProfile})
   }
   getMFADevice () {
-    if (!this.baseProfileSet()) {return}
+    if (!this.baseProfileSet()) {throw new Error('You do not have a base profile selected.')}
+
     return new Promise((resolve, reject) => {
       AWS.config.credentials = new AWS.SharedIniFileCredentials({profile: this._userObj.currentProfile})
       this._iam = new AWS.IAM()
       this._iam.listMFADevices({}, (err, data) => {
-        if(err) {reject(err)}
+        // if(err) {reject(err)}
+        if(!data || err) {
+          return reject(new Error(`No mfa device detected with the \'${this._userObj.currentProfile}\' AWS profile, or that profile doesn\'t have the permission to list MFA devices.`))
+        }
         this._userObj.mfaDevice = data.MFADevices[0].SerialNumber
         resolve(this._userObj.mfaDevice)
       })
@@ -150,12 +169,12 @@ class AWSCreds {
       throw new Error(credentials)
     }
 
-    await update('profile', {
+    await this.update('profile', {
       currentProfile: true
     },{
       $set: {currentProfile: false}
     }, {upsert: true})
-    await update('profile', {
+    await this.update('profile', {
       profileName: this._userObj.currentProfile
     }, {
       $set: assignIn(omit(credentials, ['DurationSeconds']), {currentProfile: true})
@@ -171,7 +190,7 @@ class AWSCreds {
     console.log(profile)
     this._userObj.currentProfile = profile || this._userObj.currentProfile
     // if we have a cached MFA session, let's look that up first'
-    let profileInQuestion = await findOne('profile', {profileName: this._userObj.currentProfile})
+    let profileInQuestion = await this.findOne('profile', {profileName: this._userObj.currentProfile})
 
     if (this.profileMfaExpired(profileInQuestion)) {
       this._userObj.baseCreds = new AWS.SharedIniFileCredentials({profile: this._userObj.currentProfile})
@@ -195,11 +214,7 @@ class AWSCreds {
     return this.baseProfileSet()
   }
 
-  getProfileNames () {
-    return map(this._availableProfiles, (val, key) => {
-      return key
-    })
-  }
+
   getCredObject (dbObj) {
     let date = new Date()
     let newObj = {
@@ -312,7 +327,7 @@ class AWSCreds {
       throwError(e)
     }
     try {
-      let newDetails = await update('roles', {
+      let newDetails = await this.update('roles', {
         _id: roleDetails._id
       }, {
         $set: assignIn(omit(roleDetails, '_id'), {TempCreds: assumedRole.Credentials})
@@ -357,13 +372,13 @@ class AWSCreds {
     // do we know if this is
     if (roleArn) {
       // find if already assumed
-      roleDetails = await findOne('roles', {Arn: roleArn, profile: this._userObj.currentProfile})
+      roleDetails = await this.findOne('roles', {Arn: roleArn, profile: this._userObj.currentProfile})
       if (!roleDetails) {
-        let roleDetails = await update('roles', {Arn: roleArn, profile: this._userObj.currentProfile}, {$set: {role: role}}, {upsert: true})
+        let roleDetails = await this.update('roles', {Arn: roleArn, profile: this._userObj.currentProfile}, {$set: {role: role}}, {upsert: true})
       }
       // if not, lets assume it
     } else {
-      roleDetails = await findOne('roles', {RoleName: role, profile: this._userObj.currentProfile})
+      roleDetails = await this.findOne('roles', {RoleName: role, profile: this._userObj.currentProfile})
     }
     // if(!roleDetails) {
     //   throw new Error(`Role does not exist for ${role}`)
@@ -384,7 +399,7 @@ class AWSCreds {
     try {
       console.log('assuming container role')
       let roleId = await this.assumeContainerRole(roleDetails)
-      roleDetails = await findOne('roles', {_id: roleId})
+      roleDetails = await this.findOne('roles', {_id: roleId})
       console.log("Found container role")
     }catch (e) {
       Bounce.rethrow(e, 'system');

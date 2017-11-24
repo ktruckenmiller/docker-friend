@@ -3,31 +3,62 @@ const Lab = require('lab');
 const lab = exports.lab = Lab.script();
 const Code = require('code');
 const expect = Code.expect;
-const awsCreds = require('../awsCredentials').AWSCreds
-console.log(awsCreds)
-
 const before = lab.before;
 let aws
 lab.experiment('awscredentials', () => {
 
   before(async () => {
-    aws = new awsCreds()
-    await aws.init()
+    // aws = new awsCreds()
+    aws = require('../awsCredentials').awsCreds
   })
-  lab.test('init aws creds', async () => {
-    expect(aws.baseProfileSet()).to.equal(true)
-    expect((await aws.getRoles()).length).to.be.above(0)
+  lab.test('get mfa device', async () => {
+    aws.baseProfileSet = () => {
+      return false
+    }
+    try {
+      aws.getMFADevice()
+    }catch(e) {
+      expect(e).to.be.an.error('You do not have a base profile selected.')
+    }
+    // find a profile
+    aws._userObj = {
+      currentProfile: 'default'
+    }
+    aws.baseProfileSet = () => {
+      return true
+    }
     expect(await aws.getMFADevice()).to.be.a.string().and.contain(['arn:aws:iam::'])
-    expect(aws.getProfileNames().length).to.equal(2)
+
+    // found a profile, but no mfa in the profile
+    aws._userObj = {
+      currentProfile: 'danielle'
+    }
+    try {
+      let boston = await aws.getMFADevice()
+    } catch(e) {
+      expect(e).to.be.an.error("No mfa device detected with the 'danielle' AWS profile, or that profile doesn't have the permission to list MFA devices.")
+    }
+
+
+
+    // expect(aws.baseProfileSet()).to.equal(true)
+    // expect((await aws.getRoles()).length).to.be.above(0)
+    // expect(await aws.getMFADevice()).to.be.a.string().and.contain(['arn:aws:iam::'])
+    // expect(aws.getProfileNames().length).to.equal(2)
 
   });
+
   lab.test('role stuff', async () => {
-    try {
-      await aws.getRole('boston')
-    }catch(err) {
-      expect(err).to.be.an.error("Could not find the profile boston.")
+    aws.findOne = (action, roleObj) => {
+      return {profile: '', Arn: '', RoleId: ''}
     }
     expect(await aws.getRole('Boston')).to.include(['profile', 'Arn', 'RoleId'])
+
+    // null
+    aws.findOne = (action, roleObj) => {
+      return null
+    }
+    expect(await aws.getRole('boston')).to.be.null()
   })
   lab.test('session token', async () => {
     aws.getMFADevice = () => {
@@ -64,14 +95,79 @@ lab.experiment('awscredentials', () => {
     expect(aws.credsExpired(notExpiredDate)).to.be.false()
   })
 
+  lab.test('container role request', () => {
+    aws.findOne = () => {
+      return
+    }
+
+
+    // finally, the test
+    aws.assumeContainerRole({
+      
+    })
+
+  })
 
 })
-lab.experiment('no-aws credentials', () => {
-  lab.test('AWS Credential helper no default creds', () => {
+
+lab.experiment('aws credentials', () => {
+  lab.test('get available profiles', async () => {
+    let profiles
     try {
-      new awsCreds('boston')
-    }catch(err) {
-      expect(err).to.be.an.error("This profile doesn't exist.")
+      profiles = await aws.checkAWSProfiles()
+    }catch (e) {
+      expect(e).to.be.an.error("No profile with this name: undefined")
     }
+
+    try {
+      profiles = await aws.checkAWSProfiles('boston')
+
+    }catch(e) {
+      expect(e).to.be.an.error('No profile with this name: boston')
+    }
+
+    profiles = await aws.checkAWSProfiles('default')
+  })
+  lab.test('init', async () => {
+    aws.checkAWSProfiles = () => {
+      return {shoey: 'hey'}
+    }
+    aws.setBaseProfile = () => {return}
+    try {
+      await aws.init('boston')
+    }catch(err) {
+      expect(err).to.be.an.error("No profile with this name: boston")
+    }
+    await aws.init('shoey')
+    expect(aws._availableProfiles).to.be.an.object().and.contain('shoey')
+
   });
+
+  lab.test('Found stashed credentials that still work', async () => {
+    let testDate = new Date()
+    testDate.setDate(testDate.getDate() + 3)
+    let profObj = {
+      profileName: 'default',
+      AccessKeyId: 'asdf',
+      SecretAccessKey: 'asdf',
+      SessionToken: 'asdf',
+      Expiration: testDate,
+      SerialNumber: 'arn:aws:iam::1234:mfa/asdf',
+      TokenCode: '423079',
+      currentProfile: true,
+      _id: 'NF0GEypCyKRX1HL6'
+    }
+    aws.findOne = (str, obj) => {
+      return profObj
+    }
+    aws.setBaseProfile = () => {
+      return
+    }
+    await aws.init()
+
+  })
+
+  lab.test('Found stashed creds that are expired', () => {
+
+  })
 })

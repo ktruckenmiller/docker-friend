@@ -48,8 +48,10 @@ module.exports = [{
   },{
     method: 'GET',
     path: '/aws/profiles',
-    handler: function(request, reply) {
-      reply(awsCreds.getProfileNames())
+    handler: async (request, reply) => {
+      console.log(awsCreds.getProfileNames())
+      let profiles = awsCreds.getProfileNames()
+      reply(profiles)
     }
   },{
     method: 'POST',
