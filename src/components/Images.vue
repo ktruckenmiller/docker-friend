@@ -13,7 +13,7 @@ import Nes from 'nes'
 import { mapActions } from 'vuex'
 import SingleImage from './SingleImage'
 import { filter, isArray } from 'lodash'
-const client = new Nes.Client('ws://localhost:8010');
+const client = new Nes.Client(`ws://${process.env.API_HOST}`);
 
 export default {
   name: 'index',
@@ -46,7 +46,7 @@ export default {
     // getIndex() {
     //
     //
-    //   this.$http.get('http://localhost:8010/profiles').then(response => {
+    //   this.$http.get(`http://${process.env.API_HOST}/profiles`).then(response => {
     //     console.log(response.body);
     //     // console.log(client)
     //   }, response => {
@@ -57,7 +57,7 @@ export default {
   created() {
     let that = this
     // get endpoint stuff
-    this.$http.get('http://localhost:8010/images').then(res => {
+    this.$http.get(`http://${process.env.API_HOST}/images`).then(res => {
       console.log(res)
       that.updateImages(res.body)
     })

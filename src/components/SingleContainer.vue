@@ -7,6 +7,7 @@
       <p :class="container.ImagePrefix">{{container.Image}}</p>
     </div>
     <div class="controls">
+      <i class="fa fa-area-chart graph" @click="openStats(container)" v-if="container.State === 'running'" aria-hidden="true" title="Container Metrics"></i>
       <i class="fa fa-key" :class="[container.AuthStatus.state]" v-if="container.AuthStatus.authed"  title="Load AWS Credentials"></i>
       <i class="fa fa-stop" @click="stopContainer(container)" v-if="container.State === 'running'" title="Stop Container"></i>
       <i class="fa fa-play" @click="startContainer(container)" v-if="container.State !== 'running'" title="Start Container"></i>
@@ -22,7 +23,14 @@ import { mapActions } from 'vuex'
 export default {
   name: 'container',
   props: ['container'],
-  methods: mapActions(['removeContainer', 'startContainer', 'restartContainer', 'stopContainer', 'assumeRole'])
+  methods: mapActions([
+    'removeContainer',
+    'startContainer',
+    'restartContainer',
+    'stopContainer',
+    'assumeRole',
+    'openStats'
+  ])
 }
 </script>
 
@@ -65,6 +73,10 @@ export default {
             color:$blue;
             &:hover {
               color: $dark_blue;
+            }
+            &:active {
+              position: relative;
+              top:1px;
             }
           }
           .fa-ellipsis-h {

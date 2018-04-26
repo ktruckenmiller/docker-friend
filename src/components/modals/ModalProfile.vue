@@ -17,6 +17,7 @@
       placeholder="MFA Token"
       type="number"
       v-on:input="updateValue($event.target.value)"
+      @keyup.enter="mfaAuth()"
     >
     <div class="actionable">
       <div class="my-button cancel"  @click="cancel">cancel</div>

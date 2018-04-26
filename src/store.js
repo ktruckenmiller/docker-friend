@@ -26,7 +26,8 @@ const state = {
   error: "",
   profileNames: [],
   modalState: false,
-  modalProfile: ""
+  modalProfile: "",
+  modalStats: ""
 }
 
 // mutations are operations that actually mutates the state.
@@ -92,6 +93,9 @@ const mutations = {
   },
   modalProfile(state, obj) {
     state.modalProfile = obj.profile
+  },
+  modalStats(state, obj) {
+    state.modalStats = obj.container
   }
 }
 
@@ -192,6 +196,7 @@ const actions = {
   hideModal({commit, state}) {
     commit('modalSet', false)
     commit('modalProfile', false)
+    commit('modalStats', false)
     commit('error', '')
   },
   showModal({commit, state}) {
@@ -202,11 +207,15 @@ const actions = {
     commit('modalSet', true)
     commit('modalProfile', {profile: profile})
   },
+  openStats({commit, state}, container) {
+    commit('modalSet', true)
+    commit('modalStats', {container: container})
+  },
   submitMFA({commit, state}, mfa) {
-    return Vue.http.post('http://localhost:8010/aws/submitmfa', {"mfa": mfa, "profile": state.modalProfile})
+    return Vue.http.post(`http://${process.env.API_HOST}/aws/submitmfa`, {"mfa": mfa, "profile": state.modalProfile})
   },
   // assumeRole({commit, state}) {
-  //   Vue.http.post('http://localhost:8010/aws/assumerole').then(res => {
+  //   Vue.http.post(`http://${process.env.API_HOST}/aws/assumerole`).then(res => {
   //     console.log(res)
   //   }).catch(err => {
   //     console.log(err)

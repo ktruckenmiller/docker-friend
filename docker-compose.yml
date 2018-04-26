@@ -1,7 +1,7 @@
 version: '3'
-
 services:
   docker-friend:
+    build: .
     container_name: docker-friend
     image: docker-friend
     privileged: true
@@ -9,7 +9,7 @@ services:
       - ~/.aws:/root/.aws:ro
       - /var/run/docker.sock:/var/run/docker.sock
     network_mode: host
-    
+
   frontend:
     container_name: docker-friend-nginx
     depends_on:
@@ -17,5 +17,3 @@ services:
     image: ktruckenmiller/docker-friend-nginx:0.2.51
     ports:
       - 127.0.0.1:8010:80
-    # logging:
-    #   driver: "none"

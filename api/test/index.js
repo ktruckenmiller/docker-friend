@@ -95,16 +95,29 @@ lab.experiment('awscredentials', () => {
     expect(aws.credsExpired(notExpiredDate)).to.be.false()
   })
 
-  lab.test('container role request', () => {
+  lab.test('container role request', async () => {
+    let roleId
     aws.findOne = () => {
       return
     }
+    aws.update = () => {
+      return
+    }
+    aws._sts = {
+      assumeRole: (stuff) => {
+        return {
+          promise: () => {
+            return {}
+          }
+        }
+      }
+    }
 
 
-    // finally, the test
-    aws.assumeContainerRole({
-      
-    })
+    // no arn
+    roleId = await aws.assumeContainerRole({}, true)
+    expect(roleId).to.be.undefined()
+
 
   })
 
@@ -115,6 +128,7 @@ lab.experiment('aws credentials', () => {
     let profiles
     try {
       profiles = await aws.checkAWSProfiles()
+
     }catch (e) {
       expect(e).to.be.an.error("No profile with this name: undefined")
     }
@@ -167,7 +181,7 @@ lab.experiment('aws credentials', () => {
 
   })
 
-  lab.test('Found stashed creds that are expired', () => {
-
-  })
+  // lab.test('Found stashed creds that are expired', () => {
+  //
+  // })
 })

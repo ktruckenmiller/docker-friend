@@ -7,7 +7,7 @@ docker run -it \
   -d \
   --rm \
   --name="docker-friend-nginx" \
-  nginx
+  nginx:alpine
 # npm run dev & \
 docker run -it \
   --rm \

@@ -1,29 +1,23 @@
-FROM node:alpine
-RUN apk update && apk add net-tools iptables curl jq
-
-
-
-
-
-# backend stuff
+FROM node:alpine AS static
 RUN npm install webpack hapi babel-cli -g
-# WORKDIR ./api
-# RUN npm run build
-
-COPY ./api /code/api
-WORKDIR /code/api
-RUN rm package-lock.json
-RUN npm install
-
-
-# frontend stuff
 WORKDIR /code
-COPY package.json /code/package.json
+COPY package.json /code
 RUN npm install
-COPY ./build /code/build
-COPY ./config /code/config
-COPY ./src /code/src
-COPY index.html setup.sh /code/
+COPY . /code
 RUN npm run build
+RUN ls
 
-ENTRYPOINT /code/setup.sh
+
+FROM node:alpine
+RUN apk add --no-cache net-tools iptables curl jq
+RUN npm install webpack hapi babel-cli -g
+WORKDIR /code/api
+COPY api/package.json /code/api
+RUN npm install
+
+COPY api /code/api
+COPY --from=static /code/dist /code/dist
+WORKDIR /code
+COPY index.html setup.sh /code/
+
+ENTRYPOINT ["/code/setup.sh"]

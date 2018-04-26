@@ -25,10 +25,22 @@ module.exports = [{
       }
     },{
       method: 'GET',
+      path: '/container/stats/{params*}',
+      handler: function (req, reply) {
+        Got(`http://unix:/var/run/docker.sock:/containers/${req.params.params}/stats?stream=false`).then(stats => {
+          reply(JSON.parse(stats.body))
+        }).catch(err => {
+          reply({err: true, msg: 'Couldnt find cake'})
+        })
+      }
+    },{
+      method: 'GET',
       path: '/images',
       handler: function (err, reply) {
         Got('http://unix:/var/run/docker.sock:/images/json?all=1').then(images => {
           reply(images.body)
+        }).catch(err => {
+          reply(err)
         })
       }
     },{

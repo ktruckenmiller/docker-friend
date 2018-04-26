@@ -98,7 +98,6 @@ module.exports = [{
       } catch (e) {
         console.log(e)
         throwError(e)
-        console.log('replying with' + e)
         reply(e)
 
       }
