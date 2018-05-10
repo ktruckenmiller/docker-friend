@@ -1,9 +1,8 @@
 version: '3'
 services:
   docker-friend:
-    build: .
     container_name: docker-friend
-    image: docker-friend
+    image: ktruckenmiller/docker-friend
     privileged: true
     volumes:
       - ~/.aws:/root/.aws:ro
@@ -14,6 +13,6 @@ services:
     container_name: docker-friend-nginx
     depends_on:
       - docker-friend
-    image: ktruckenmiller/docker-friend-nginx:0.2.51
+    image: ktruckenmiller/docker-friend-nginx
     ports:
       - 127.0.0.1:8010:80
