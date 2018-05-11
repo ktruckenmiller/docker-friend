@@ -1,24 +1,25 @@
-# FROM node:7.8-alpine
-# RUN apt-get update && apt-get install iptables net-tools -y
-FROM node:7.8-alpine
-RUN apk update && apk add net-tools iptables
-
-RUN npm install webpack hapi -g
-COPY package.json /code/package.json
+FROM node:alpine AS static
+RUN npm install webpack hapi babel-cli -g
 WORKDIR /code
+COPY package.json /code
+RUN npm install
+COPY . /code
+RUN npm run build
+RUN ls
+
+
+FROM node:alpine
+RUN apk add --no-cache net-tools iptables curl jq
+RUN npm install webpack hapi babel-cli -g
+RUN npm install ifconfig-linux lodash
+WORKDIR /code/api
+COPY api/package.json /code/api
 RUN npm install
 
-# frontend stuff
-COPY ./build /code/build
-COPY ./config /code/config
-COPY ./src /code/src
-COPY ./index.html /code/index.html
-COPY ./setup.sh /code/setup.sh
-COPY ./run-prod.sh /code/run-prod.sh
-RUN npm run build
+COPY api /code/api
+COPY ifconfig.js /code
+COPY --from=static /code/dist /code/dist
+WORKDIR /code
+COPY index.html setup.sh /code/
 
-# backend stuff
-COPY ./api /code/api
-
-
-ENTRYPOINT /code/run-prod.sh
+ENTRYPOINT ["/code/setup.sh"]

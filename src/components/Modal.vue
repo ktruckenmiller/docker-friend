@@ -6,7 +6,7 @@
           <!-- <i class='fa fa-close' @click="hideModal()"></i> -->
           <ModalError v-if="$store.state.error"> </ModalError>
           <ModalProfile v-if="this.$store.state.modalProfile"></ModalProfile>
-
+          <ModalStats v-if="this.$store.state.modalStats"></ModalStats>
         </div>
       </div>
     </div>
@@ -14,16 +14,27 @@
 </template>
 
 <script>
+
+import Nes from 'nes'
 import ModalError from './modals/ModalError'
 import ModalProfile from './modals/ModalProfile'
+import ModalStats from './modals/ModalStats'
 import {isEmpty} from 'lodash'
 import { mapActions } from 'vuex'
+const client = new Nes.Client(`ws://${process.env.API_HOST}`);
 export default {
   name: 'modal',
   methods: mapActions([
-    'hideModal'
+    'hideModal',
+    'updateEvents'
   ]),
-  components: {ModalError, ModalProfile}
+  created () {
+    let that = this
+    client.connect(function(err) {
+      client.subscribe('/events', that.updateEvents, function (err) {})
+    })
+  },
+  components: {ModalError, ModalProfile, ModalStats}
 
 }
 </script>

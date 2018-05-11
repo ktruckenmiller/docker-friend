@@ -3,8 +3,10 @@ const Inert = require('inert');
 const Path = require('path');
 const Nes = require('nes')
 const Got = require('got')
+import AWSRoles from './awsRoles'
+import ErrorSockets from './errorSockets'
+const awsCreds = require('./awsCredentials').awsCreds
 const _ = require('lodash')
-const AWS = require('./awsCredentials')
 
 
 const Routes = require('./routes/index')
@@ -16,6 +18,9 @@ const server = new Hapi.Server({
             files: {
                 relativeTo: Path.join(__dirname, '../dist')
             }
+        },
+        router: {
+          stripTrailingSlash: true
         }
     }
 });
@@ -26,27 +31,46 @@ server.connection({
 
 
 
-server.register([Inert, Nes], function (err) {
+server.register([Inert, Nes, AWSRoles, ErrorSockets], async (err) => {
     if (err) {
         throw err;
     }
+    await awsCreds.init()
     server.route(Routes)
     server.subscription('/containers')
     server.subscription('/images')
-    server.start((err) => {
-      function refreshDocker() {
-        Got('http://unix:/var/run/docker.sock:/containers/json?all=1').then(containers => {
-          AWS.filterContainers(containers.body, function(err, res) {
-            server.publish('/containers', res)
-          })
+    server.subscription('/container/{id}');
 
+    server.start((err) => {
+      // const currentContainers = () => {
+      //   let allContainers
+      //   return {
+      //     updateContainers: (containers) => {
+      //       console.log(allContainers)
+      //       allContainers = _.map(containers, container => {
+      //         return {
+      //           id: container.Id,
+      //           stream: Got.stream(`http://unix:/var/run/docker.sock:/containers/${container.Id}/stats`).on('data', (data) => {
+      //             console.log(data.toString("utf-8"))
+      //           })
+      //         }
+      //       })
+      //     }
+      //   }
+      // }
+      function refreshDocker() {
+        let containers
+        // let containerStreams = currentContainers()
+        Got('http://unix:/var/run/docker.sock:/containers/json?all=1').then(containers => {
+          containers = awsCreds.filterContainers(containers.body)
+          server.publish('/containers', containers)
+          // containerStreams.updateContainers(containers)
         })
         Got('http://unix:/var/run/docker.sock:/images/json?all=1').then(images => {
-
           server.publish('/images', images.body)
         })
       }
-      // On our event, lets debounce and the load
+       // On our event, lets debounce and the load
       Got.stream('http://unix:/var/run/docker.sock:/events').on('data', _.debounce(refreshDocker, 100))
 
       if (err) {
@@ -59,7 +83,8 @@ server.ext({
     type: 'onRequest',
     method: function (request, reply) {
         // check and make sure this is a local request?
-        // console.log(request.raw.req.headers)
+        // console.log(request.route.settings.cors)
+        // console.log(request.path)
         reply.continue();
     }
 });

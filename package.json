@@ -14,10 +14,12 @@
   "dependencies": {
     "aws-sdk": "^2.16.0",
     "babel-runtime": "^6.23.0",
+    "buefy": "^0.5.4",
     "dockerode": "2.3.6",
     "fs": "0.0.1-security",
     "got": "^6.7.1",
     "hapi": "^16.1.0",
+    "ifconfig-linux": "^0.1.0",
     "inert": "^4.1.0",
     "lodash": "^4.17.4",
     "moment": "^2.18.1",

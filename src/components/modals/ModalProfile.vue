@@ -2,7 +2,7 @@
 
   <div class="wrap">
     <transition name="fade">
-      <div v-if="loading" class="loader">
+      <div v-if="loading" class="my-loader">
         <div class="loading-pulse"></div>
       </div>
     </transition>
@@ -17,12 +17,13 @@
       placeholder="MFA Token"
       type="number"
       v-on:input="updateValue($event.target.value)"
+      @keyup.enter="mfaAuth()"
     >
     <div class="actionable">
-      <div class="button cancel"  @click="cancel">cancel</div>
+      <div class="my-button cancel"  @click="cancel">cancel</div>
       <div
         v-bind:class="{ active: canSubmit, inactive: !canSubmit }"
-        class="button"  @click="mfaAuth">submit</div>
+        class="my-button"  @click="mfaAuth">submit</div>
     </div>
 
   </div>
@@ -53,16 +54,40 @@ export default {
       // Emit the number value through the input event
     },
     mfaAuth() {
-      console.log()
-
-      // this.$store.dispatch('mfaLogin', this.mfa)
       if(this.mfa.length === 6) {
         this.loading = true
         this.$store.dispatch('submitMFA', this.mfa).then(res => {
+          if(res.body.err) {
+            this.$store.dispatch('hideModal')
+            this.$toast.open({
+                    duration: 5000,
+                    message: `${res.body.msg.message}`,
+                    position: 'is-top',
+                    type: 'is-danger'
+            })
+
+            this.mfa = ''
+          }else {
+            this.$toast.open({
+                    duration: 5000,
+                    message: `You're now authenticated with MFA.`,
+                    position: 'is-top',
+                    type: 'is-success'
+            })
+            this.$store.dispatch('hideModal')
+          }
           this.loading = false
-          this.$store.dispatch('hideModal')
+
         }).catch(err => {
           console.log(err)
+          this.loading = false
+          this.$toast.open({
+                  duration: 5000,
+                  message: `${JSON.stringify(err)}`,
+                  position: 'is-top',
+                  type: 'is-danger'
+          })
+          this.$store.dispatch('hideModal')
         })
       }
 
@@ -89,82 +114,85 @@ export default {
       background: $white;
     }
   }
-  .loading-pulse {
-    position: relative;
-    width: ($base-line-height / 4);
-    height: $base-line-height;
-    background: $off-white;
-    animation: pulse $pulse-duration infinite;
-    animation-delay: ($pulse-duration / 3);
-    &:before, &:after {
-      content: '';
-      position: absolute;
-      display: block;
-      height: ($base-line-height / 1.5);
+  .modal-mask {
+    .loading-pulse {
+      position: relative;
       width: ($base-line-height / 4);
+      height: $base-line-height;
       background: $off-white;
-      top: 50%;
-      transform: translateY(-50%);
       animation: pulse $pulse-duration infinite;
-    }
-    &:before {
-      left: -($base-line-height / 2);
-    }
-    &:after {
-      left: ($base-line-height / 2);
-      animation-delay: ($pulse-duration / 1.5);
-    }
-  }
-  input[type=number]::-webkit-inner-spin-button,
-  input[type=number]::-webkit-outer-spin-button {
-    -webkit-appearance: none;
-    margin: 0;
-  }
-  ::-webkit-input-placeholder {
-    letter-spacing:1px;
-    text-align:left;
-    color:$blue;
-    opacity:.2
-  }
-
-  .wrap {
-
-    .loader {
-      position:absolute;
-      background-color:$blue;
-      z-index:100;
-      top:0;
-      left:0;right:0;bottom:0;
-      display: flex;
-      justify-content: space-around;
-      align-items: center;
-      // background: #333333;
-    }
-  }
-  .header {
-    p {
-
-      color:$gray;
-      span {
-        color:$dark_gray;
+      animation-delay: ($pulse-duration / 3);
+      &:before, &:after {
+        content: '';
+        position: absolute;
+        display: block;
+        height: ($base-line-height / 1.5);
+        width: ($base-line-height / 4);
+        background: $off-white;
+        top: 50%;
+        transform: translateY(-50%);
+        animation: pulse $pulse-duration infinite;
+      }
+      &:before {
+        left: -($base-line-height / 2);
+      }
+      &:after {
+        left: ($base-line-height / 2);
+        animation-delay: ($pulse-duration / 1.5);
       }
     }
-  }
-  .actionable {
-    display:flex;
-    justify-content: flex-end;
-    align-items: center;
+    input[type=number]::-webkit-inner-spin-button,
+    input[type=number]::-webkit-outer-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+    ::-webkit-input-placeholder {
+      letter-spacing:1px;
+      text-align:left;
+      color:$blue;
+      opacity:.2
+    }
+
+    .wrap {
+
+      .my-loader {
+        position:absolute;
+        background-color:$blue;
+        z-index:100;
+        top:0;
+        left:0;right:0;bottom:0;
+        display: flex;
+        justify-content: space-around;
+        align-items: center;
+        // background: #333333;
+      }
+    }
+    .header {
+      p {
+
+        color:$gray;
+        span {
+          color:$dark_gray;
+        }
+      }
+    }
+    .actionable {
+      display:flex;
+      justify-content: flex-end;
+      align-items: center;
 
 
+    }
+
+    input {
+      text-align:center;
+      width:100%;
+      position: relative;
+      font-size: 6rem;
+      border: none;
+      line-height: 4rem;
+      letter-spacing: 21px;
+    }
   }
 
-  input {
-    text-align:center;
-    width:100%;
-    position: relative;
-    font-size: 6rem;
-    border: none;
-    line-height: 4rem;
-    letter-spacing: 21px;
-  }
 </style>

@@ -1,5 +1,5 @@
 
-const awsCreds = require('../awsCredentials')
+const awsCreds = require('../awsCredentials').awsCreds
 const Got = require('got')
 
 const Docker = require('dockerode')
@@ -20,9 +20,17 @@ module.exports = [{
       path: '/containers',
       handler: function (err, reply) {
         Got('http://unix:/var/run/docker.sock:/containers/json?all=1').then(containers => {
-          awsCreds.filterContainers(containers.body, function(err, res) {
-            reply(res)
-          })
+          reply(awsCreds.filterContainers(containers.body))
+        })
+      }
+    },{
+      method: 'GET',
+      path: '/container/stats/{params*}',
+      handler: function (req, reply) {
+        Got(`http://unix:/var/run/docker.sock:/containers/${req.params.params}/stats?stream=false`).then(stats => {
+          reply(JSON.parse(stats.body))
+        }).catch(err => {
+          reply({err: true, msg: 'Couldnt find cake'})
         })
       }
     },{
@@ -31,6 +39,8 @@ module.exports = [{
       handler: function (err, reply) {
         Got('http://unix:/var/run/docker.sock:/images/json?all=1').then(images => {
           reply(images.body)
+        }).catch(err => {
+          reply(err)
         })
       }
     },{
@@ -44,6 +54,7 @@ module.exports = [{
       method: 'GET',
       path: '/profiles',
       handler: function(err, reply) {
+        console.log(awsCreds)
         reply(awsCreds.getProfileNames())
       }
     }

@@ -15,6 +15,10 @@
 
 <script>
   import DropMenu from './dropmenu'
+  import Nes from 'nes'
+  import { mapActions } from 'vuex'
+  const client = new Nes.Client(`ws://${process.env.API_HOST}`);
+
   export default {
     name: 'navigation',
     props: ['router'],
@@ -24,6 +28,29 @@
     //     console.log();
     //   }
     // },
+    created() {
+
+      client.connect(() => {
+        client.subscribe('/aws', (res) => {
+          this.$store.dispatch('changeProfileSelection', res)
+        }, (err) => {
+          console.log(err)
+        })
+        client.subscribe('/errors', (res) => {
+          console.log(res)
+          if ( res ) {
+            this.$toast.open({
+                    duration: 10000,
+                    message: `${res.msg}`,
+                    position: 'is-top',
+                    type: 'is-danger'
+            })
+          } else {console.log(res)}
+        }, (err) => {
+          console.log(err)
+        })
+      })
+    },
     components: {DropMenu}
   }
 </script>
@@ -50,6 +77,7 @@
         letter-spacing:1px;
       }
       .logo {
+        font-weight: 100;
         padding-left: 24px;
         font-size:24px;
         color:$blue;
@@ -59,11 +87,13 @@
       }
       .local, .cloud {
         a {
-          color:$blue;
-          font-size:20px;
-          padding:20px 20px;
+          color: $blue;
+          font-size: 24px;
+          padding: 5px 21px 5px 21px;
           transition: color .2s ease-in-out;
-          font-weight:100;
+          font-weight: 100;
+          letter-spacing: 3px;
+
           &:hover {
             cursor:pointer;
             color:$black;

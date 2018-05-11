@@ -1,5 +1,4 @@
 #!/bin/sh
-npm run build
 docker build -t ktruckenmiller/docker-friend .
 docker build -t ktruckenmiller/docker-friend-nginx -f Dockerfile.nginx .
 docker push ktruckenmiller/docker-friend

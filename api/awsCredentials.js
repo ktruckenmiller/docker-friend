@@ -1,77 +1,220 @@
 'use strict'
+import fs from 'fs'
+import ini from 'ini'
+import colors from 'colors'
+import Docker from 'dockerode'
+import AWS from 'aws-sdk'
+import { throwError } from './errorSockets'
+import Bounce from 'bounce'
 
+import { findOne, update } from './database'
 
-const fs = require('fs')
-const ini = require('ini')
-const _ = require('lodash')
-const colors = require('colors')
-const Docker = require('dockerode')
+import {
+  isString,
+  isObject,
+  concat,
+  map,
+  has,
+  assignIn,
+  pluck,
+  omit,
+  filter,
+  chain,
+  includes,
+  last,
+  split,
+  reject
+} from 'lodash'
+
 const docker = new Docker();
 
-const AWS = require('aws-sdk')
-let sts = new AWS.STS()
-let iam = new AWS.IAM()
-
-const Datastore = require('nedb')
 
 
 
-const db = new Datastore({ filename: 'tmp/data.db', autoload: true });
-db.containers = new Datastore({ filename: 'tmp/containers.db', autoload: true });
-db.roles = new Datastore({ filename: 'tmp/roles.db', autoload: true });
-db.profile = new Datastore({ filename: 'tmp/profile.db', autoload: true });
-
-
-const AWSCredentials = (function() {
-  const credentials = ini.parse(fs.readFileSync(process.env.HOME + '/.aws/credentials', 'utf-8'))
-  let currentProfile = ""
-
-
-  var getMFADevice = function() {
-    iam = new AWS.IAM()
-    return iam.listMFADevices().promise()
+class AWSCreds {
+  constructor () {
+    // Private Vars
+    this._sts = new AWS.STS()
+    this._iam = new AWS.IAM()
+    this._roles = []
+    this.update = update
+    this.findOne = findOne
   }
-  var setMFAAuth = function(serial, token) {
-    const params = {
-      DurationSeconds: 129600,
-      SerialNumber: serial,
-      TokenCode: token
-    }
-    sts = new AWS.STS()
-    return sts.getSessionToken(params).promise()
-  }
-  var setAWSBase = function(cb) {
-    db.profile.findOne({currentProfile: true}, function(err, data) {
-      let profileObj = data
-      if(Date.parse(data.Expiration) > new Date().getTime()) {
-        AWS.config.credentials = new AWS.Credentials(data.AccessKeyId, data.SecretAccessKey, data.SessionToken)
-      }else {
-        AWS.config.credentials = new AWS.SharedIniFileCredentials({profile: profileObj.profileName})
-      }
-      if(typeof(cb) === 'function') {
-        cb()
+  checkAWSProfiles (profileName) {
+    return new Promise((resolve, reject) => {
+      let profiles = ini.parse(fs.readFileSync(process.env.HOME + '/.aws/credentials', 'utf-8'))
+      if (!has(profiles, profileName)) {
+
+        throw Error(`No profile with this name: ${profileName}`)
+      } else {
+        resolve(profiles)
       }
     })
+  }
+  getProfileNames () {
+    return map(ini.parse(fs.readFileSync(process.env.HOME + '/.aws/credentials', 'utf-8')), (val, key) => {
+      return key
+    })
+  }
+  async init (profileName = 'default') {
+    this._availableProfiles = this.checkAWSProfiles(profileName)
+    this._userObj = {
+      currentProfile: profileName,
+      mfaDevice: ''
+    }
+    let profileObj = await this.findOne('profile', {currentProfile: true})
+    if (isObject(profileObj)) {
+      // found a profile that we're Using
+      profileName = profileObj.profileName
+    }
+    try {
+      await this.setBaseProfile(profileName)
+    } catch(err) {
+      throw new Error(err)
+    }
+  }
+  baseProfileSet () {
+    if (isString(this._userObj.baseCreds.accessKeyId)) {
+      return true
+    } else {
+      return false
+    }
+  }
+  async getProfile() {
+    let profile = await this.findOne('profile', {currentProfile: true})
+    if (this.profileMfaExpired(profile)) {
+      return
+    } else {
+      return profile
+    }
 
   }
-  var getContainerByIp = function(ipAddress, cb) {
-    docker.listContainers({all: true}, function(err, containers) {
-      let matchingContainer = _.filter(containers, function(container) {
-        try {
-          return container.State === 'running' && container.NetworkSettings.Networks.bridge.IPAddress === ipAddress
-        }catch(err) {}
-      })
-      matchingContainer = docker.getContainer(matchingContainer[0].Id)
-      matchingContainer.inspect(function(err, res) {
-        if(typeof(cb) === 'function' && !err) {
-          cb(null, res)
-        }else {
-          cb(err)
+  getRoles () {
+    if (!this.baseProfileSet()) {return []}
+    let roles = []
+    console.log('Refreshing iam roles...')
+    return new Promise((resolve, reject) => {
+      this._iam = new AWS.IAM()
+      this._iam.listRoles({}).eachPage((err, data, done) => {
+        if (err) {
+          reject(err)
+        }
+        if (data) {
+          roles = concat(roles, data.Roles)
+          done(true)
+        } else {
+          resolve(roles)
+          done()
         }
       })
-    });
+    })
   }
-  var getCredObject = function(dbObj) {
+  async setRoles (roles) {
+    let newRoles = map(roles, (role) => {
+      return this.update('roles', {
+          RoleName: role.RoleName,
+          profile: this._userObj.currentProfile
+        }, {$set: assignIn(role, {
+          profile: this._userObj.currentProfile
+        })}, {upsert: true})
+    })
+    let res = await Promise.all(newRoles)
+    console.log('Refreshed all IAM roles.')
+    return res
+  }
+  async getRole (name) {
+    return await this.findOne('roles', {RoleName: name, profile: this._userObj.currentProfile})
+  }
+  getMFADevice () {
+    if (!this.baseProfileSet()) {throw new Error('You do not have a base profile selected.')}
+
+    return new Promise((resolve, reject) => {
+      AWS.config.credentials = new AWS.SharedIniFileCredentials({profile: this._userObj.currentProfile})
+      this._iam = new AWS.IAM()
+      this._iam.listMFADevices({}, (err, data) => {
+        // if(err) {reject(err)}
+        if(!data || err) {
+          return reject(new Error(`No mfa device detected with the \'${this._userObj.currentProfile}\' AWS profile, or that profile doesn\'t have the permission to list MFA devices.`))
+        }
+        this._userObj.mfaDevice = data.MFADevices[0].SerialNumber
+        resolve(this._userObj.mfaDevice)
+      })
+    })
+  }
+
+  async getSessionToken (token = false) {
+    let params = {
+      DurationSeconds: 3600
+    }
+    if(token) {
+      let hasMFADevice = await this.getMFADevice()
+      if(!hasMFADevice) {throw new Error('Profile does not have an MFA device detected.')}
+      params = assignIn(params, {
+        SerialNumber: hasMFADevice,
+        TokenCode: String(token),
+        DurationSeconds: 129600
+      })
+    }
+    this._sts = new AWS.STS()
+    let res = await this._sts.getSessionToken(params).promise()
+    return assignIn(res.Credentials, params)
+  }
+
+
+
+  // public
+  async setMFA (token) {
+    let credentials = await this.getSessionToken(token)
+    if (credentials.AccessDenied) {
+      throw new Error(credentials)
+    }
+
+    await this.update('profile', {
+      currentProfile: true
+    },{
+      $set: {currentProfile: false}
+    }, {upsert: true})
+    await this.update('profile', {
+      profileName: this._userObj.currentProfile
+    }, {
+      $set: assignIn(omit(credentials, ['DurationSeconds']), {currentProfile: true})
+    }, { upsert: true })
+    this.setBaseProfile()
+  }
+  profileMfaExpired (profileInQuestion) {
+    try {
+      return this.credsExpired(profileInQuestion.Expiration)
+    } catch (e) {return true}
+  }
+  async setBaseProfile (profile = false) {
+    this._userObj.currentProfile = profile || this._userObj.currentProfile
+    // if we have a cached MFA session, let's look that up first'
+    let profileInQuestion = await this.findOne('profile', {profileName: this._userObj.currentProfile})
+
+    if (this.profileMfaExpired(profileInQuestion)) {
+      this._userObj.baseCreds = new AWS.SharedIniFileCredentials({profile: this._userObj.currentProfile})
+      console.log('Using base credentials')
+      if (!this.baseProfileSet()) { throw new Error("This profile doesn't exist.")}
+      AWS.config.credentials = this._userObj.baseCreds
+    } else {
+
+      this._userObj.baseCreds = new AWS.Credentials(
+          profileInQuestion.AccessKeyId,
+          profileInQuestion.SecretAccessKey,
+          profileInQuestion.SessionToken
+        )
+      console.log('Using session elevated MFA credentials')
+      AWS.config.credentials = this._userObj.baseCreds
+    }
+
+    // could probably put this in to its
+    let roles = await this.getRoles()
+    await this.setRoles(roles)
+    return this.baseProfileSet()
+  }
+
+
+  getCredObject (dbObj) {
     let date = new Date()
     let newObj = {
       Code: "Success",
@@ -84,238 +227,179 @@ const AWSCredentials = (function() {
     }
     return newObj
   }
-  var getContainerRole = function(container) {
+
+  getContainerByIp (ipAddress) {
+    return new Promise((resolve, reject) => {
+      docker.listContainers({all: true}, function(err, containers) {
+        if(err) {
+          return reject(err)
+        }
+        let matchingContainer = filter((containers), (container) => {
+
+            if (container.State === 'running') {
+              let network = Object.keys(container.NetworkSettings.Networks)[0]
+              return container.NetworkSettings.Networks[network].IPAddress === ipAddress
+            }
+
+        })
+        matchingContainer = docker.getContainer(matchingContainer[0].Id)
+        matchingContainer.inspect((err, res) => {
+          if (err) {
+            return reject(err)
+          }
+          return resolve(res)
+        })
+      })
+    })
+  }
+
+  async getContainerRoleNameByIp (ipAddress, getArn = false) {
+    try {
+      let container = await this.getContainerByIp(ipAddress)
+      let roleName = await this.getContainerRoleName(container, getArn)
+      if(!isString(roleName)) {
+        throwError("No role associated with this container. Set it by using `-e IAM_ROLE=my-role` or `-e IAM_ROLE_ARN=arn:aws:iam::<account>:role/your-role` on the container run.")
+        throw new Error("No role associated with this container. Set it by using `-e IAM_ROLE=my-role` or `-e IAM_ROLE_ARN=arn:aws:iam::<account>:role/your-role` on the container run.")
+      }
+      return roleName
+    }catch(err) {
+      Bounce.rethrow(err, 'system');
+      throwError(err)
+      throw new Error(err)
+    }
+
+  }
+  async getContainerRoleArnByIp (ipAddress) {
+    let container = await this.getContainerByIp(ipAddress)
+    return await this.getContainerRoleArn(container)
+  }
+
+  getContainerRoleArn (container) {
     let envVars = container.Config.Env
-    return _.chain(envVars).filter(function(env) {
-      return _.includes(env, 'IAM_ROLE')
-    }).map(function(env) {
-      return _.split(env, '=')[1]
+    let roleArn = chain(envVars)
+      .filter((env) => {
+        return includes(env, 'IAM_ROLE_ARN')
+      }).value()
+    if (roleArn.length > 0) {
+      return split(roleArn[0], '=')[1]
+    }
+  }
+
+
+  getContainerRoleName (container, isArn) {
+    let envVars = container.Config.Env
+    return chain(envVars)
+    .filter((env) => {
+      return includes(env, 'IAM_ROLE')
+    }).map((env) => {
+      let r = split(env, '=')[1]
+      if(isArn) {
+        return r
+      } else {
+        return last(split(r, '/'))
+      }
+
     }).value()[0]
   }
-  var refreshCredentials = function(ipAddress, cb) {
 
-    db.containers.findOne({ip: ipAddress}, function(err, container) {
-      // get and set the proper role
-      if (!err && container.roleArn) {
-        console.log(colors.yellow("Creds expired for "+container.containerName+", refreshing them."))
-        let new_sts = new AWS.STS()
-        new_sts.assumeRole({
-          DurationSeconds: 3600,
-          RoleArn: container.roleArn,
-          RoleSessionName: container.containerName
-        }, function(err, res) {
+  credsExpired (expiration) {
+    // if(!isString(expiration)) { throw new Error(`Cred expiration: ${expiration} is not a date.`)}
+    return Date.parse(expiration) < new Date().getTime()
+  }
 
-          if(!err && res.Credentials) {
-            db.containers.update({ip: container.ip}, {$set: res.Credentials}, {upsert: true}, function(errdb, resdb) {
-              cb(err, res.Credentials)
-            })
-          }else {
-            console.log(colors.red(err, res))
-            cb(err, res)
-          }
-        })
-      }
+  async assumeContainerRole (roleDetails, dryRun = false) {
+    // Get new sts object based on potential base credentials
+    if ( !dryRun ) { this._sts = new AWS.STS() }
+    let assumedRole, roleUpdateObj
+    assumedRole = await this._sts.assumeRole({
+      DurationSeconds: 3600,
+      RoleArn: roleDetails.Arn,
+      RoleSessionName: 'docker-friend'
+    }).promise()
+
+    let newDetails = await this.update('roles', {
+      _id: roleDetails._id
+    }, {
+      $set: assignIn(omit(roleDetails, '_id'), {TempCreds: assumedRole.Credentials})
+    }, {
+      upsert: true
     })
+    return roleDetails._id
   }
-  var refreshRoles = function() {
-    console.log(colors.green("refreshing roles..."))
-    const iam = new AWS.IAM()
-    let params = {}
-    function getRoles(newParams) {
-      iam.listRoles(newParams, function(err, data) {
-        if(!err) {
-          _.each(data.Roles, function(role) {
-            db.roles.update({RoleName: role.RoleName}, {$set: role}, {upsert: true}, function(err, res) {})
-          })
-          if(data.IsTruncated && !_.isEmpty(data.Roles)) {
-            getRoles({Marker: data.Marker})
-          }else {
-            console.log(colors.green('Done.'))
-          }
-        }else {
-          console.log(colors.red(err))
-        }
-      })
-    }
-    getRoles(params)
-  }
-  var init = function() {
-    db.profile.findOne({currentProfile: true}, function(err, data) {
 
-      if(!_.isEmpty(data)) {
-        currentProfile = data.profileName
-        AWS.config.credentials = new AWS.Credentials(data.AccessKeyId, data.SecretAccessKey, data.SessionToken)
-      }else {
-        AWS.config.credentials = new AWS.SharedIniFileCredentials()
-        if(AWS.config.credentials.accessKeyId) {
-          refreshRoles()
-        }else {
-          console.log("Unable to assume default creds. You'll have to do that in the UI.")
-        }
+  async containerRoleRequest (ipAddress) {
+
+    let roleFail, roleDetails, roleArn, role
+    // not getting past here
+    try {
+      role = await this.getContainerRoleNameByIp(ipAddress, true)
+      // not getting role
+      if(includes(role, "arn:aws:iam::")) {
+        roleArn = role
+        role = await this.getContainerRoleNameByIp(ipAddress)
+      } else {
+        roleArn = await this.getContainerRoleArnByIp(ipAddress)
       }
-    })
-  }
-
-  init()
-  return {
-    filterContainers: function(containers, cb) {
-      // if container is running
-      // set MFA authed or not.
-
-      let all_containers = _.map(JSON.parse(containers), function(val) {
-
-        let container = val
-        container.AuthStatus = {'authed': false, state: 'none'}
-        return new Promise(function(resolve, reject) {
-          try {
-            if(container.State === 'running') {
-
-              db.containers.findOne({ip: container.NetworkSettings.Networks.bridge.IPAddress}, function(err, res) {
-                if(res) {
-                  if(Date.parse(res.Expiration) > new Date().getTime()) {
-                    container.AuthStatus = {'authed': true, state: 'active'}
-                    resolve(container)
-                  }
-                }
-                resolve(container)
-              })
-            }else {
-              resolve(container)
-            }
-          }catch(err) {
-            resolve(container)
-          }
-
-        })
-      })
-      Promise.all(all_containers).then(values => {
-        let filtered_containers = _.reject(values, function(val) {
-          return val.Names[0] === '/docker-friend' || val.Names[0] === '/docker-friend-nginx'
-        })
-        cb(null, filtered_containers)
-      })
-
-    },
-    getProfileNames: function() {
-      return _.map(credentials, function(val, key) {
-        return key
-      })
-    },
-    setProfile: function(profileName, cb) {
-      currentProfile = profileName
-      db.profile.update({currentProfile: true}, {$set:{currentProfile: false}}, function(err, data) {
-        db.profile.update({profileName: profileName}, {$set: {profileName: profileName, currentProfile: true}}, { upsert: true },function(err, data) {
-          setAWSBase(cb)
-        })
-      })
-    },
-    mfaAuth: function(mfa, cb) {
-      getMFADevice()
-        .then(function(res) {
-          let sn = res.MFADevices[0].SerialNumber
-          console.log('sn = ' + sn)
-          setMFAAuth(sn, mfa).then(function(res) {
-            let extraSec = {
-              SerialNumber: sn,
-              TokenCode: mfa
-            }
-            db.profile.update({ profileName: currentProfile }, {$set: _.assignIn(res.Credentials, extraSec)}, { upsert: true }, function (err, data) {
-              if(err) {
-                console.log(colors.red('error updating database for profile'))
-                cb(err)
-              }else {
-                setAWSBase()
-                refreshRoles()
-                cb(data)
-              }
-            });
-          }).catch(function(err) {
-            console.log(colors.red('error setting MFA Auth'))
-            console.log(colors.yellow(err))
-            cb(err)
-          })
-        })
-        .catch(function(err) {
-          console.log(colors.red('error getting MFA device'))
-          console.log(err)
-          cb(err)
-        })
-
-    },
-    setProfile: function(profileName, cb) {
-      currentProfile = profileName
-      // set aws profile credentials
-      db.profile.update({currentProfile: true}, {$set:{currentProfile: false}}, function(err, data) {
-        db.profile.update({profileName: profileName}, {$set: {profileName: profileName, currentProfile: true}}, { upsert: true },function(err, data) {
-          setAWSBase(cb)
-        })
-      })
-    },
-    getRoleName: function(ipAddress, cb) {
-      // get the role name by IP and return it
-      getContainerByIp(ipAddress, function(err, container) {
-        let role = getContainerRole(container)
-        if (role) {
-          // make sure we have this role populated with proper info
-          db.roles.findOne({RoleName: role}, function(err, res) {
-            if(err) {
-              console.log(colors.red("Unable to locate a AWS profile to use."))
-              console.log(colors.green("Click on the upper right profile button, and choose which profile you'd like to assume the role of your container with."))
-              // send message to the error bus
-            }
-            db.containers.update({ip: ipAddress}, {$set: {
-              containerName: container.Name.replace('/', '')
-            }}, {upsert: true}, function(errUpdate, resUpdate) {
-              cb(role || err)
-            })
-          })
-        }else {
-          console.log('No role associated with ' + container.Name)
-          cb(res)
-          // db.containers.update({ip: ipAddress}, {$set: {
-          //   roleName: "",
-          //   roleArn: "",
-          //   containerName: container.Name.replace('/', '')
-          // }}, {upsert: true}, function(err, res) {
-          //   cb(res)
-          // })
-        }
-      })
-
-    },
-    getCreds: function(ipAddress, newRoleName, cb) {
-
-
-      // find the old container
-      db.containers.findOne({ip: ipAddress}, function(err, old_container) {
-        // match the incoming role to an arn
-
-        db.roles.findOne({RoleName: newRoleName}, function(err, foundRole) {
-          // set up current role no matter what
-          if(foundRole) {
-            if(_.isEmpty(old_container) || Date.parse(old_container.Expiration) < new Date().getTime() || old_container.roleName !== newRoleName) {
-
-              db.containers.update({ip: ipAddress}, {$set: {
-                roleName: foundRole.RoleName,
-                roleArn: foundRole.Arn
-              }}, {upsert: true}, function(err, res) {
-                refreshCredentials(ipAddress, function(err, res) {
-                  cb(null, getCredObject(res))
-                })
-              })
-            }else {
-              console.log(old_container)
-              cb(null, getCredObject(old_container))
-            }
-          }else {
-            console.log(colors.red('Could not find role of name '+newRoleName +' in this account.'))
-          }
-
-        })
-      })
+    }catch (err) {
+      // Bounce.rethrow(err, 'system');
+      throw new Error(err);
     }
 
+    if(!isString(roleArn)) {
+      throw new Error(`No role found in this account by this name: ${role}`)
+    }
+    // do we know if this is
+    if (roleArn) {
+      // find if already assumed
+      roleDetails = await this.findOne('roles', {Arn: roleArn, profile: this._userObj.currentProfile})
+      if (!roleDetails) {
+        let roleDetails = await this.update('roles', {Arn: roleArn, profile: this._userObj.currentProfile}, {$set: {role: role}}, {upsert: true})
+      }
+      // if not, lets assume it
+    } else {
+      roleDetails = await this.findOne('roles', {RoleName: role, profile: this._userObj.currentProfile})
+    }
+    // if(!roleDetails) {
+    //   throw new Error(`Role does not exist for ${role}`)
+    // }
+    // if expired or no creds, refresh
+    try {
+      if (this.credsExpired(roleDetails.TempCreds.Expiration)) {
+        console.log('creds expired...')
+      } else {
+        console.log('creds not expired, returning')
+        return this.getCredObject(roleDetails.TempCreds)
+      }
+    } catch (e) {
+      console.log()
+    }
+    try {
+      let roleId = await this.assumeContainerRole(roleDetails)
+      roleDetails = await this.findOne('roles', {_id: roleId})
+    }catch (e) {
+      // Bounce.rethrow(e, 'system');
+      throw new Error(e)
+    }
+    if (roleDetails.TempCreds) {
+      return this.getCredObject(roleDetails.TempCreds)
+    } else {
+      throwError("Can't get tempcreds obj")
+      throw new Error("can't get tmp creds object")
+    }
   }
-})()
+  filterContainers (containers) {
+    let filtered = reject(JSON.parse(containers), (val) => {
+      return val.Names[0] === '/docker-friend' || val.Names[0] === '/docker-friend-nginx'
+    })
 
-module.exports = AWSCredentials
+    filtered = map(filtered, (val) => {
+      val.AuthStatus = {'authed': false, state: 'none'}
+      return val
+    })
+    return filtered
+  }
+}
+
+let obj = new AWSCreds()
+
+module.exports.awsCreds = obj

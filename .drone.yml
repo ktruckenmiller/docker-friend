@@ -1,0 +1,43 @@
+pipeline:
+
+  build_friend:
+    image: plugins/docker
+    repo: ktruckenmiller/docker-friend
+    secrets: [ docker_username, docker_password ]
+    tags:
+      - latest
+    when:
+      branch: [master]
+      event: [push]
+
+  build_nginx:
+    image: plugins/docker
+    repo: ktruckenmiller/docker-friend-nginx
+    dockerfile: Dockerfile.nginx
+    secrets: [ docker_username, docker_password ]
+    tags:
+      - latest
+    when:
+      branch: [master]
+      event: [push]
+
+  release_friend:
+    image: plugins/docker
+    repo: ktruckenmiller/docker-friend
+    secrets: [ docker_username, docker_password ]
+    tags:
+      - latest
+      - ${DRONE_TAG}
+    when:
+      event: [tag]
+
+  release_nginx:
+    image: plugins/docker
+    repo: ktruckenmiller/docker-friend-nginx
+    secrets: [ docker_username, docker_password ]
+    dockerfile: Dockerfile.nginx
+    tags:
+      - latest
+      - ${DRONE_TAG}
+    when:
+      event: [tag]

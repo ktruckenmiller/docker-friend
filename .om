@@ -1,8 +1,0 @@
-build:
-  artifacts:
-    dockerfriend:
-      dockerhub: ktruckenmiller/docker-friend
-      dockerfile: Dockerfile
-    nginx:
-      dockerhub: ktruckenmiller/docker-friend-nginx
-      dockerfile: Dockerfile.nginx

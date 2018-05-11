@@ -24,6 +24,9 @@ export default {
 
     }
   },
+  created() {
+
+  },
   methods: mapActions([
     'changeProfileSelection',
     'showModal',
