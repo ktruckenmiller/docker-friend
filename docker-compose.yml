@@ -11,6 +11,8 @@ services:
 
   frontend:
     container_name: docker-friend-nginx
+    logging:
+      driver: none
     depends_on:
       - docker-friend
     image: ktruckenmiller/docker-friend-nginx
