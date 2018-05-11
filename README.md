@@ -32,22 +32,14 @@ docker run -e IAM_ROLE=my-role ubuntu:14.04
 
 # Using different docker bridge networks
 
-If you areusing docker to create multiple bridged networks, you'll have to add opts to the docker container.
-Using docker compose, you can specify your network thus:
+If you are using docker-compose, you'll need to specify your network so that docker friend doesn't have any trouble figuring out the plumbing. Right now you'll have to restart docker friend when you spin up a new compose stack, but I'm working on just plumbing that on the fly.
 
 ```
 version: '3'
 networks:
-  my-network:
-    driver: bridge
-    driver_opts:
-      com.docker.network.bridge.name: my-network
+  mynetwork:
     ipam:
-      driver: default
       config:
-      - subnet: 10.100.0.0/16
+        - subnet: 192.168.120.0/21
 
 ```
-As you can see, you need to specify driver_opts. That just sets up the network
-interface to have a specific name. You'll need to restart docker-friend after
-you create this network.
