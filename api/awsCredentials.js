@@ -67,7 +67,6 @@ class AWSCreds {
       // found a profile that we're Using
       profileName = profileObj.profileName
     }
-
     try {
       await this.setBaseProfile(profileName)
     } catch(err) {
@@ -334,7 +333,6 @@ class AWSCreds {
     // not getting past here
     try {
       role = await this.getContainerRoleNameByIp(ipAddress, true)
-
       // not getting role
       if(includes(role, "arn:aws:iam::")) {
         roleArn = role
@@ -364,8 +362,6 @@ class AWSCreds {
     // if(!roleDetails) {
     //   throw new Error(`Role does not exist for ${role}`)
     // }
-
-
     // if expired or no creds, refresh
     try {
       if (this.credsExpired(roleDetails.TempCreds.Expiration)) {
