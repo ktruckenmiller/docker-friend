@@ -27,7 +27,7 @@ To specify the role of a container, simply launch it with the `IAM_ROLE`
 environment variable set to the IAM role you wish the container to run with.
 
 ```shell
-docker run -e IAM_ROLE=my-role ubuntu:14.04
+docker run -e IAM_ROLE=arn:aws:iam::<myaccount>:role/myrole ubuntu:14.04
 ```
 
 # Using different docker bridge networks
