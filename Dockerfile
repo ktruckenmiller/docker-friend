@@ -17,7 +17,7 @@ COPY api/package.json /code/api
 RUN npm install
 
 COPY api /code/api
-COPY ifconfig.js /code
+COPY startups/ifconfig.js /code
 COPY --from=static /code/dist /code/dist
 WORKDIR /code
 COPY index.html setup.sh /code/
