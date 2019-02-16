@@ -2,7 +2,7 @@
 LOCAL_IPV4=$(ifconfig docker0 | sed -En 's/127.0.0.1//;s/.*inet (addr:)?(([0-9]*\.){3}[0-9]*).*/\2/p')
 ip address add 169.254.169.254/32 label lo:0 dev lo
 
-networks=$(node ifconfig.js)
+networks=$(node startups/ifconfig.js)
 
 for interface in $networks; do
   iptables \

@@ -1,5 +1,5 @@
-FROM node:alpine AS static
-RUN npm install webpack hapi babel-cli -g --no-bin-links
+FROM node AS static
+RUN npm install webpack hapi babel-cli -g
 WORKDIR /code
 COPY package.json /code
 RUN npm install
@@ -8,7 +8,7 @@ RUN npm run build
 RUN ls
 
 
-FROM node:alpine as FRIEND
+FROM node as FRIEND
 RUN apk add --no-cache net-tools iptables curl jq
 RUN npm install webpack hapi babel-cli -g
 RUN npm install ifconfig-linux lodash
