@@ -8,7 +8,7 @@ RUN npm run build
 RUN ls
 
 
-FROM node:alpine
+FROM node:alpine as FRIEND
 RUN apk add --no-cache net-tools iptables curl jq
 RUN npm install webpack hapi babel-cli -g
 RUN npm install ifconfig-linux lodash
@@ -23,3 +23,11 @@ WORKDIR /code
 COPY index.html setup.sh /code/
 
 ENTRYPOINT ["/code/setup.sh"]
+
+
+FROM nginx:alpine as NGINX
+COPY ./nginx.conf /etc/nginx/conf.d/default.conf
+
+FROM FRIEND as DEV
+WORKDIR /code
+RUN npm install -g nodemon babel-polyfill

@@ -1,43 +1,38 @@
-pipeline:
 
-  build_friend:
-    image: plugins/docker
-    repo: ktruckenmiller/docker-friend
-    secrets: [ docker_username, docker_password ]
-    tags:
-      - latest
-    when:
-      branch: [master]
-      event: [push]
+---
+kind: pipeline
+name: friend
 
-  build_nginx:
+steps:
+  - name: frontend
     image: plugins/docker
-    repo: ktruckenmiller/docker-friend-nginx
-    dockerfile: Dockerfile.nginx
-    secrets: [ docker_username, docker_password ]
-    tags:
-      - latest
-    when:
-      branch: [master]
-      event: [push]
+    settings:
+      repo: ktruckenmiller/docker-friend
+      auto_tag: true
+      target: FRIEND
+      username:
+        from_secret: username
+      password:
+        from_secret: password
+      when:
+        branch: [master]
+        event: [push]
 
-  release_friend:
-    image: plugins/docker
-    repo: ktruckenmiller/docker-friend
-    secrets: [ docker_username, docker_password ]
-    tags:
-      - latest
-      - ${DRONE_TAG}
-    when:
-      event: [tag]
+---
+kind: pipeline
+name: nginx
 
-  release_nginx:
+steps:
+  - name: frontend
     image: plugins/docker
-    repo: ktruckenmiller/docker-friend-nginx
-    secrets: [ docker_username, docker_password ]
-    dockerfile: Dockerfile.nginx
-    tags:
-      - latest
-      - ${DRONE_TAG}
-    when:
-      event: [tag]
+    settings:
+      repo: ktruckenmiller/docker-friend-nginx
+      auto_tag: true
+      target: NGINX
+      username:
+        from_secret: username
+      password:
+        from_secret: password
+      when:
+        branch: [master]
+        event: [push]
