@@ -1,5 +1,5 @@
 FROM node:alpine AS static
-RUN npm install webpack hapi babel-cli -g
+RUN npm install webpack hapi babel-cli -g --no-bin-links
 WORKDIR /code
 COPY package.json /code
 RUN npm install
