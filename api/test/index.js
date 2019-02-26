@@ -70,12 +70,6 @@ lab.experiment('awscredentials', () => {
       })
     }
     try {
-      await aws.getSessionToken(12345)
-    }catch(err) {
-      expect(err).to.be.an.error("1 validation error detected: Value '12345' at 'tokenCode' failed to satisfy constraint: Member must have length greater than or equal to 6")
-    }
-
-    try {
       expect(await aws.getSessionToken()).to.be.an.object()
     } catch(err) {
       console.log(err)

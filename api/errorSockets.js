@@ -1,21 +1,58 @@
-'use strict';
+class FrontEndError {
+  constructor() {
+    this.server = {}
+  }
 
-let Server
+  setServer(server) {
+    this.server = server
+  }
 
-module.exports.throwError = (payload) => {
-  // console.log(payload.message)
-  Server.publish('/errors', {msg: payload.message})
+  publish(payload) {
+    this.server.publish('/errors', {msg: payload.message})
+  }
 }
 
+const frontEndError = new FrontEndError()
+exports.throwError = frontEndError.publish
 
-module.exports.register = (server, options, next) => {
-  Server = server
-  Server.subscription('/errors')
-  next();
-}
-
-
-module.exports.register.attributes = {
+exports.plugin = {
   name: 'errorSockets',
-  version: '1.0.0'
-};
+  register: async (server, options) => {
+    // await server.publish('/errors', {msg: options.payload.message})
+    await server.subscription('/errors')
+    frontEndError.setServer(server)
+    server.route({
+        method: 'GET',
+        path: '/boston',
+        handler: function (request, h) {
+
+            return 'hello, world';
+        }
+    });
+  }
+}
+
+
+
+
+// 'use strict';
+//
+// let Server
+//
+// module.exports.throwError = (payload) => {
+//   // console.log(payload.message)
+//   Server.publish('/errors', {msg: payload.message})
+// }
+//
+//
+// module.exports.register = (server, options, next) => {
+//   Server = server
+//   Server.subscription('/errors')
+//   next();
+// }
+//
+//
+// module.exports.register.attributes = {
+//   name: 'errorSockets',
+//   version: '1.0.0'
+// };

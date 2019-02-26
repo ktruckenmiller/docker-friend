@@ -1,6 +1,5 @@
 #!/bin/sh
-docker build -t docker-friend -f Dockerfile .
-docker build -t docker-friend-dev -f Dockerfile.dev .
+docker build -t docker-friend-dev -f Dockerfile --target FRIEND .
 docker run -it \
   -v $(PWD)/nginx.conf:/etc/nginx/conf.d/default.conf \
   -p 127.0.0.1:8010:80 \

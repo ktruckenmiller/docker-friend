@@ -16,10 +16,10 @@ for interface in $networks; do
     --to-destination $LOCAL_IPV4:3000 \
     --wait
 done
-
-if [ "$1" == "dev" ]; then
-  sh
-  # cd api && npm run dev
-else
-  babel-node api/app.js
-fi
+sh
+# if [[ "$1" == "dev" ]]; then
+#   sh
+#   # cd api && npm run dev
+# else
+#   babel-node api/app.js
+# fi

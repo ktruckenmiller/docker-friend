@@ -5,11 +5,10 @@ COPY package.json /code
 RUN npm install
 COPY . /code
 RUN npm run build
-RUN ls
 
 
 FROM node as FRIEND
-RUN apk add --no-cache net-tools iptables curl jq
+RUN apt-get update -y && apt-get install curl jq net-tools -y
 RUN npm install webpack hapi babel-cli -g
 RUN npm install ifconfig-linux lodash
 WORKDIR /code/api
